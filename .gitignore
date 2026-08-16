@@ -1,0 +1,9 @@
+core/xcore
+core/xcore.exe
+bot/.bundle/
+bot/vendor/
+bot.log
+.testdl/
+*.log
+.DS_Store
+botapi/
