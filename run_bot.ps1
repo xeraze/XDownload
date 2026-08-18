@@ -28,6 +28,11 @@ if ($ApiUrl -and $ApiUrl -notmatch 'api\.telegram\.org') {
 }
 
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';C:\Ruby33-x64\msys64\ucrt64\bin'
-Set-Location (Join-Path $PSScriptRoot 'bot')
+$botDir = Join-Path $PSScriptRoot 'bot'
+$outLog = Join-Path $PSScriptRoot 'bot.log'
+$errLog = Join-Path $PSScriptRoot 'bot.err.log'
 
-bundle exec ruby bot.rb 2>&1 | ForEach-Object { "$(Get-Date -Format 'HH:mm:ss') $_" } | Out-File -FilePath (Join-Path $PSScriptRoot 'bot.log') -Encoding utf8 -Append
+$cmd = "Set-Location -LiteralPath '$botDir'; bundle exec ruby bot.rb"
+Write-Output "[$(Get-Date -Format 'HH:mm:ss')] Starting detached bot (log: $outLog)"
+Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $cmd -WindowStyle Hidden `
+  -RedirectStandardOutput $outLog -RedirectStandardError $errLog
