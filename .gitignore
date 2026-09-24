@@ -7,3 +7,5 @@ bot.log
 *.log
 .DS_Store
 botapi/
+bot.err.log
+secrets/

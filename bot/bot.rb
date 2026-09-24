@@ -5,9 +5,42 @@ require "fileutils"
 require "open3"
 require "securerandom"
 require "rbconfig"
+require "uri"
 
 TOKEN = ENV.fetch("XDL_BOT_TOKEN") { abort "Set XDL_BOT_TOKEN environment variable" }
 BOT_API_URL = ENV["XDL_BOT_API"] || "https://api.telegram.org"
+
+START_TEXT = <<~TEXT.freeze
+  Hi! I'm XDownload — paste a link, pick a format, get the file.
+
+  Works in chats and groups.
+  /help — what I support
+TEXT
+
+HELP_TEXT = <<~TEXT.freeze
+  How it works
+  1. Send a media link
+  2. Choose Audio (mp3) or Video (mp4)
+  3. For video pick quality: 480p/720p/1080p
+  4. Get the file in the chat
+
+  Supported
+  • YouTube
+  • YouTube Music
+  • Spotify
+  • SoundCloud
+  • TikTok, Instagram, Facebook
+  • Reddit, Pinterest, VK
+  • X (Twitter), Rumble
+  • Snapchat
+
+  Notes
+  • Spotify & SoundCloud — audio only
+  • One link every 5 seconds (anti-spam)
+  • Buttons (format / quality) have no cooldown
+  • Private / 18+ / region-locked media may not be downloadable
+  • Telegram limits file size on public bots
+TEXT
 
 CORE = ENV["XDL_CORE"] || begin
   base = File.expand_path("../core", __dir__)
@@ -26,6 +59,101 @@ end
 
 PENDING = {}
 PENDING_MUTEX = Mutex.new
+
+COOLDOWN_SEC = Integer(ENV.fetch("XDL_COOLDOWN_SEC", "5"))
+LAST_ACTION = {}
+LAST_ACTION_MUTEX = Mutex.new
+USER_BUSY = {}
+USER_BUSY_MUTEX = Mutex.new
+
+ALLOWED_HOSTS = %w[
+  youtube.com
+  youtu.be
+  music.youtube.com
+  open.spotify.com
+  spotify.com
+  soundcloud.com
+  tiktok.com
+  instagram.com
+  facebook.com
+  fb.watch
+  reddit.com
+  redd.it
+  pin.it
+  vk.com
+  x.com
+  twitter.com
+  rumble.com
+  snapchat.com
+  snap.com
+  t.co
+].freeze
+
+def allowed_url?(url)
+  return true if url.start_with?("spotify:")
+
+  host = begin
+    URI.parse(url).host
+  rescue URI::InvalidURIError
+    nil
+  end
+  return false if host.nil? || host.empty?
+
+  host = host.downcase
+  return true if ALLOWED_HOSTS.any? { |h| host == h || host.end_with?(".#{h}") }
+  bare = host.delete_prefix("www.")
+  !!bare.match?(/\Apinterest\.[a-z]{2,3}\z/)
+end
+
+def cooldown_left(user_id)
+  return 0 if COOLDOWN_SEC <= 0
+  now = Time.now.to_f
+  last = LAST_ACTION_MUTEX.synchronize { LAST_ACTION[user_id] }
+  return 0 unless last
+  left = COOLDOWN_SEC - (now - last)
+  left.positive? ? left.ceil : 0
+end
+
+def touch_cooldown(user_id)
+  return if COOLDOWN_SEC <= 0
+  LAST_ACTION_MUTEX.synchronize do
+    LAST_ACTION[user_id] = Time.now.to_f
+    if LAST_ACTION.size > 10_000
+      cutoff = Time.now.to_f - (COOLDOWN_SEC * 4)
+      LAST_ACTION.delete_if { |_k, v| v < cutoff }
+    end
+  end
+end
+
+def user_busy?(user_id)
+  USER_BUSY_MUTEX.synchronize { !!USER_BUSY[user_id] }
+end
+
+def set_user_busy(user_id, value)
+  USER_BUSY_MUTEX.synchronize do
+    if value
+      USER_BUSY[user_id] = true
+    else
+      USER_BUSY.delete(user_id)
+    end
+  end
+end
+
+# Call right before a download thread starts.
+# Busy-lock only — cooldown is applied when the user sends a link.
+# Returns nil if allowed, otherwise a message for the user.
+def begin_download(user_id)
+  return nil unless user_id
+  return "Download is already running — wait for the file." if user_busy?(user_id)
+  set_user_busy(user_id, true)
+  nil
+end
+
+# Call when download + upload finished: free the slot.
+def end_download(user_id)
+  return unless user_id
+  set_user_busy(user_id, false)
+end
 
 def spotify_url?(text)
   text.include?("open.spotify.com") || text.start_with?("spotify:")
@@ -76,6 +204,8 @@ def friendly_error(err)
     "This video is private, region-locked, or no longer available."
   when /sign in|age|restricted/i
     "This video requires sign-in or is age-restricted."
+  when /403|Forbidden|po.?token/i
+    "YouTube rejected the download (403). Wait a minute and try again."
   when /no output file was found|track unavailable/i
     "This track isn't available to download right now — YouTube Music has no match for it."
   else
@@ -130,6 +260,13 @@ def handle_format_choice(bot, cb, data)
     return
   end
 
+  user_id = cb.from&.id
+  if (msg = begin_download(user_id))
+    bot.api.answer_callback_query(callback_query_id: cb.id, text: msg)
+    PENDING_MUTEX.synchronize { PENDING[token] = url }
+    return
+  end
+
   chat_id = cb.message.chat.id
   bot.api.answer_callback_query(callback_query_id: cb.id)
   bot.api.send_message(chat_id: chat_id, text: "Downloading audio...")
@@ -139,6 +276,8 @@ def handle_format_choice(bot, cb, data)
       send_file(bot, chat_id, url, "mp3")
     rescue StandardError => e
       bot.api.send_message(chat_id: chat_id, text: "Unexpected error: #{e.message}")
+    ensure
+      end_download(user_id)
     end
   end
 end
@@ -151,6 +290,13 @@ def handle_quality_choice(bot, cb, data)
     return
   end
 
+  user_id = cb.from&.id
+  if (msg = begin_download(user_id))
+    bot.api.answer_callback_query(callback_query_id: cb.id, text: msg)
+    PENDING_MUTEX.synchronize { PENDING[token] = url }
+    return
+  end
+
   chat_id = cb.message.chat.id
   bot.api.answer_callback_query(callback_query_id: cb.id)
   bot.api.send_message(chat_id: chat_id, text: "Downloading video (#{height}p)...")
@@ -160,6 +306,8 @@ def handle_quality_choice(bot, cb, data)
       send_file(bot, chat_id, url, "mp4", height.to_i)
     rescue StandardError => e
       bot.api.send_message(chat_id: chat_id, text: "Unexpected error: #{e.message}")
+    ensure
+      end_download(user_id)
     end
   end
 end
@@ -260,15 +408,28 @@ Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
       text = update.text.strip
       case text
       when "/start"
-        bot.api.send_message(chat_id: update.chat.id, text: "Hi! I'm your pocket DJ. Send me a link — YouTube, Spotify, SoundCloud, TikTok, Instagram and more — and I'll fetch it for you.")
+        bot.api.send_message(chat_id: update.chat.id, text: START_TEXT)
       when "/help"
-        bot.api.send_message(chat_id: update.chat.id, text: "Paste any media link (YouTube, Spotify, SoundCloud, TikTok, Instagram, Reddit, Facebook, Pinterest, Likee and more), then pick a format. Works here and in groups.")
+        bot.api.send_message(chat_id: update.chat.id, text: HELP_TEXT)
       else
         url = extract_url(text)
         if url.nil?
           bot.api.send_message(chat_id: update.chat.id, text: "I need a media link.")
           next
         end
+        unless allowed_url?(url)
+          bot.api.send_message(
+            chat_id: update.chat.id,
+            text: "This platform isn't supported.\nSend /help to see the list."
+          )
+          next
+        end
+        user_id = update.from&.id
+        if user_id && (left = cooldown_left(user_id)) > 0
+          bot.api.send_message(chat_id: update.chat.id, text: "Slow down — wait #{left}s before sending another link.")
+          next
+        end
+        touch_cooldown(user_id) if user_id
         audio_only = audio_only_url?(url)
         bot.api.send_message(
           chat_id: update.chat.id,

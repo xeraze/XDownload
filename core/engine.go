@@ -24,13 +24,16 @@ type TrackInfo struct {
 
 var spotifyRe = regexp.MustCompile(`(?i)open\.spotify\.com|^spotify:`)
 
-// youtubeExtractorArgs uses the android_vr client, which serves up to 1080p (or higher)
-// without cookies and downloads without the "Sign in to confirm you're not a bot" block.
-const youtubeExtractorArgs = "youtube:player_client=android_vr"
+// yt-dlp's default YouTube client (with deno as the JS runtime) is the only
+// one that both lists formats and serves them without a GVS PO token.
+// android_vr used to work for metadata but now returns HTTP 403 on download.
+var youtubeClientArgs = [][]string{
+	{},
+	{"--extractor-args", "youtube:player_client=android"},
+}
 
 func ytdlpArgs(extra ...string) []string {
 	args := []string{
-		"--extractor-args", youtubeExtractorArgs,
 		"--retries", "3",
 		"--fragment-retries", "3",
 	}
@@ -81,7 +84,7 @@ func downloadAudio(url, ext, dir string) (string, error) {
 		"-o", filepath.Join(dir, "%(title)s.%(ext)s"),
 		url,
 	}
-	return runYTDLP(ytdlpArgs(args...), dir)
+	return runYTDLPYouTube(args, dir)
 }
 
 func downloadVideo(url, dir string, height int) (string, error) {
@@ -96,7 +99,22 @@ func downloadVideo(url, dir string, height int) (string, error) {
 		"-o", filepath.Join(dir, "%(title)s.%(ext)s"),
 		url,
 	}
-	return runYTDLP(ytdlpArgs(args...), dir)
+	return runYTDLPYouTube(args, dir)
+}
+
+// runYTDLPYouTube tries the default client first, then android as a fallback.
+func runYTDLPYouTube(extra []string, dir string) (string, error) {
+	var lastErr error
+	for _, client := range youtubeClientArgs {
+		args := append(ytdlpArgs(), client...)
+		args = append(args, extra...)
+		path, err := runYTDLP(args, dir)
+		if err == nil {
+			return path, nil
+		}
+		lastErr = err
+	}
+	return "", lastErr
 }
 
 func runYTDLP(args []string, dir string) (string, error) {
