@@ -9,3 +9,4 @@ bot.log
 botapi/
 bot.err.log
 secrets/
+*.ps1

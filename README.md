@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="assets/XDownload Logo.jpg" alt="XDownload" width="104" />
-
 # XDownload
 
 **Your personal downloader for Telegram**
@@ -10,16 +8,10 @@
 
 <img src="assets/XDownload Banner.jpg" alt="XDownload" width="760" />
 
-<br/>
-
 <img src="https://img.shields.io/badge/Telegram-bot-333333?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" />
 <img src="https://img.shields.io/badge/mp3-333333?style=flat-square" alt="mp3" />
 <img src="https://img.shields.io/badge/480%20%7C%20720%20%7C%201080p-333333?style=flat-square" alt="qualities" />
 <img src="https://img.shields.io/badge/anti--spam-333333?style=flat-square" alt="anti-spam" />
-
-<br/><br/>
-
-[How it works](#how-it-works) · [Platforms](#platforms) · [Features](#features) · [Notes](#notes)
 
 </div>
 
@@ -158,7 +150,6 @@
 ---
 
 <div align="center">
-  <br/>
   <a href="LICENSE"><sub>License</sub></a>
   <sub> · </sub>
   <a href="docs/privacy-policy.md"><sub>Privacy</sub></a>
