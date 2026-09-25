@@ -28,48 +28,56 @@
 <table>
   <tr>
     <td align="center" width="25%">
-      <img src="https://cdn.simpleicons.org/youtube/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/youtube/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>YouTube</b><br/><sub>video/audio</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://cdn.simpleicons.org/spotify/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/spotify/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Spotify</b><br/><sub>audio</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://cdn.simpleicons.org/soundcloud/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/soundcloud/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>SoundCloud</b><br/><sub>audio</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://cdn.simpleicons.org/tiktok/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/tiktok/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>TikTok</b><br/><sub>video/audio</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/instagram/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/instagram/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Instagram</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/facebook/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/facebook/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Facebook</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/reddit/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/reddit/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Reddit</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/pinterest/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/pinterest/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Pinterest</b><br/><sub>video/audio</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/vk/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/vk/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>VK</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/x/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/x/9CA3AF" width="24" height="24" alt="" /><br/>
       <b>Twitter</b><br/><sub>video/audio</sub>
+    </td>
+    <td align="center">
+      <img src="https://cdn.simpleicons.org/rumble/9CA3AF" width="24" height="24" alt="" /><br/>
+      <b>Rumble</b><br/><sub>video/audio</sub>
+    </td>
+    <td align="center">
+      <img src="https://cdn.simpleicons.org/snapchat/9CA3AF" width="24" height="24" alt="" /><br/>
+      <b>Snapchat</b><br/><sub>video/audio</sub>
     </td>
   </tr>
 </table>
@@ -108,10 +116,13 @@
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
 | **Restricted media** | Links to private / 18+ / region-restricted video and audio files may not be available for download |
 | **File size** | Up to 2 GB per file |
-| **[Privacy Policy](docs/privacy-policy.md)** |
+
+<div align="center">
+  <img src="assets/xdownload-avatar.png" alt="XDownload bot" width="140" />
+</div>
 
 <div align="center">
   <a href="LICENSE"><sub>License</sub></a>
   <sub> · </sub>
-  <a href="PRIVACY-POLICY.md"><sub>Privacy Policy</sub></a>
+  <a href="docs/privacy-policy.md"><sub>Privacy Policy</sub></a>
 </div>
