@@ -1,14 +1,12 @@
 # Privacy Policy — XDownload
 
-_Last updated: September 2026_
-
 ## What the bot does
 
-XDownload is a Telegram bot for personal use. You send a link, choose a format (audio or video) and, for video, a quality — the bot processes the link with [yt-dlp](https://github.com/yt-dlp/yt-dlp) and sends the resulting file back to you in chat.
+XDownload is a Telegram bot for personal use. You send a link, choose a format (audio or video) and for video you choose quality (the bot processes the link with [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and sends the resulting file back to you in chat.
 
 ## What is stored
 
-**Nothing.** The bot does not keep a database, does not log links, files, or messages, and does not retain any user identifiers beyond what Telegram itself requires to deliver the response.
+**Nothing.** The bot does not keep a database, does not log links, files or messages and does not retain any user identifiers beyond what Telegram itself requires to deliver the response.
 
 The link you send is used only to fetch and process the requested media in memory/temporary storage for the duration of that single request. Once the file is sent back to you, nothing related to that request remains on the server.
 
@@ -30,4 +28,4 @@ If this policy changes, the updated version will be published in this repository
 
 ## Contact
 
-Questions about this policy can be raised through the repository's issue tracker.
+Questions about this policy can be published through issues.
