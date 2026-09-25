@@ -1,14 +1,6 @@
 <div align="center">
 
-# XDownload
-
-*Link in → file*
-
 <img src="assets/xdownload-banner.svg" alt="XDownload" width="760" />
-
-<img src="https://img.shields.io/badge/Telegram-bot-333333?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" />
-<img src="https://img.shields.io/badge/video%20%2B%20audio-333333?style=flat-square" alt="video + audio" />
-<img src="https://img.shields.io/badge/up%20to%201080p-333333?style=flat-square" alt="480p/720p/1080p" />
 
 </div>
 
@@ -29,7 +21,7 @@
   </tr>
 </table>
 
-> Spotify & SoundCloud are **audio-only** — the bot shows only the audio button.
+> Spotify & SoundCloud are **audio-only** - the bot shows only the audio button.
 
 ## Platforms
 
@@ -37,60 +29,52 @@
   <tr>
     <td align="center" width="25%">
       <img src="https://cdn.simpleicons.org/youtube/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>YouTube</b><br/><sub>480–1080p</sub>
+      <b>YouTube</b><br/><sub>video/audio</sub>
     </td>
     <td align="center" width="25%">
       <img src="https://cdn.simpleicons.org/spotify/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Spotify</b><br/><sub>320 kbps</sub>
+      <b>Spotify</b><br/><sub>audio</sub>
     </td>
     <td align="center" width="25%">
       <img src="https://cdn.simpleicons.org/soundcloud/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>SoundCloud</b><br/><sub>audio only</sub>
+      <b>SoundCloud</b><br/><sub>audio</sub>
     </td>
     <td align="center" width="25%">
       <img src="https://cdn.simpleicons.org/tiktok/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
-      <b>TikTok</b><br/><sub>audio + video</sub>
+      <b>TikTok</b><br/><sub>video/audio</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
       <img src="https://cdn.simpleicons.org/instagram/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Instagram</b><br/><sub>audio + video</sub>
+      <b>Instagram</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
       <img src="https://cdn.simpleicons.org/facebook/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Facebook</b><br/><sub>audio + video</sub>
+      <b>Facebook</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
       <img src="https://cdn.simpleicons.org/reddit/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Reddit</b><br/><sub>audio + video</sub>
+      <b>Reddit</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
       <img src="https://cdn.simpleicons.org/pinterest/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
-      <b>Pinterest</b><br/><sub>audio + video</sub>
+      <b>Pinterest</b><br/><sub>video/audio</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
       <img src="https://cdn.simpleicons.org/vk/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>VK</b><br/><sub>audio + video</sub>
+      <b>VK</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
       <img src="https://cdn.simpleicons.org/x/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
-      <b>X (Twitter)</b><br/><sub>audio + video</sub>
-    </td>
-    <td align="center">
-      <img src="https://cdn.simpleicons.org/rumble/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Rumble</b><br/><sub>audio + video</sub>
-    </td>
-    <td align="center">
-      <img src="https://cdn.simpleicons.org/snapchat/9CA3AF" width="26" height="26" alt="" /><br/>
-      <b>Snapchat</b><br/><sub>Spotlight</sub>
+      <b>Twitter</b><br/><sub>video/audio</sub>
     </td>
   </tr>
 </table>
 
-<p align="center"><sub>Allowlist — anything outside this grid is declined</sub></p>
+<p align="left"><sub>This is a whitelist of platforms supported by the bot. If your service is not listed here, the bot will not be able to extract audio or video from a link posted on an unsupported service.</sub></p>
 
 ## Features
 
@@ -111,18 +95,8 @@
       <sub>No links, no ads, no landing pages</sub>
     </td>
     <td>
-      <b>Anti-spam</b><br/>
-      <sub>1 link / 5 s · one download at a time</sub>
-    </td>
-  </tr>
-  <tr>
-    <td>
       <b>Groups & private</b><br/>
       <sub>Works in any chat you add it to</sub>
-    </td>
-    <td>
-      <b>Smart fallback</b><br/>
-      <sub>Too big? Quality is lowered automatically</sub>
     </td>
   </tr>
 </table>
@@ -132,16 +106,12 @@
 | | |
 |:--|:--|
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
-| **Restricted media** | Private / 18+ / region-locked may fail |
-<<<<<<< HEAD
+| **Restricted media** | Links to private / 18+ / region-restricted video and audio files may not be available for download |
 | **File size** | Up to 2 GB per file |
-| **Privacy** | Nothing stored → [Privacy Policy](docs/privacy-policy.md) |
-=======
-| **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
+| **[Privacy Policy](docs/privacy-policy.md)** |
 
 <div align="center">
   <a href="LICENSE"><sub>License</sub></a>
   <sub> · </sub>
   <a href="PRIVACY-POLICY.md"><sub>Privacy Policy</sub></a>
 </div>
->>>>>>> 79293832969eb1bb370a176d58abebdf327c37f0
