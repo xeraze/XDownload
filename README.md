@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="assets/XDownload Logo.jpg" alt="XDownload" width="104" />
-
 # XDownload
 
 **Your personal downloader for Telegram**
@@ -18,10 +16,6 @@
 <img src="https://img.shields.io/badge/anti--spam-333333?style=flat-square" alt="anti-spam" />
 
 <br/><br/>
-
-</div>
-
----
 
 ## How it works
 
