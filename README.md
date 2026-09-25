@@ -16,7 +16,6 @@
 <img src="https://img.shields.io/badge/anti--spam-333333?style=flat-square" alt="anti-spam" />
 
 <br/><br/>
-
 ## How it works
 
 <table>
@@ -35,9 +34,7 @@
 </table>
 
 > Spotify & SoundCloud are **audio-only** — the bot shows only the audio button.
-
 ---
-
 ## Platforms
 
 <table>
@@ -98,9 +95,7 @@
 </table>
 
 <p align="center"><sub>Allowlist — anything outside this grid is declined</sub></p>
-
 ---
-
 ## Features
 
 <table>
@@ -135,9 +130,7 @@
     </td>
   </tr>
 </table>
-
 ---
-
 ## Notes
 
 | | |
@@ -146,9 +139,7 @@
 | **Restricted media** | Private / 18+ / region-locked may fail |
 | **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
 | **Privacy** | Nothing stored → [Privacy Policy](docs/privacy-policy.md) |
-
 ---
-
 <div align="center">
   <br/>
   <a href="LICENSE"><sub>License</sub></a>
