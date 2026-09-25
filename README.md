@@ -19,8 +19,6 @@
 
 <br/><br/>
 
-[How it works](#how-it-works) · [Platforms](#platforms) · [Features](#features) · [Notes](#notes)
-
 </div>
 
 ---
