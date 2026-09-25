@@ -12,8 +12,6 @@
 
 </div>
 
----
-
 ## How it works
 
 <table>
@@ -32,8 +30,6 @@
 </table>
 
 > Spotify & SoundCloud are **audio-only** — the bot shows only the audio button.
-
----
 
 ## Platforms
 
@@ -96,8 +92,6 @@
 
 <p align="center"><sub>Allowlist — anything outside this grid is declined</sub></p>
 
----
-
 ## Features
 
 <table>
@@ -133,8 +127,6 @@
   </tr>
 </table>
 
----
-
 ## Notes
 
 | | |
@@ -142,8 +134,6 @@
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
 | **Restricted media** | Private / 18+ / region-locked may fail |
 | **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
-
----
 
 <div align="center">
   <a href="LICENSE"><sub>License</sub></a>
