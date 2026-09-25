@@ -133,5 +133,15 @@
 |:--|:--|
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
 | **Restricted media** | Private / 18+ / region-locked may fail |
+<<<<<<< HEAD
 | **File size** | Up to 2 GB per file |
 | **Privacy** | Nothing stored → [Privacy Policy](docs/privacy-policy.md) |
+=======
+| **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
+
+<div align="center">
+  <a href="LICENSE"><sub>License</sub></a>
+  <sub> · </sub>
+  <a href="PRIVACY-POLICY.md"><sub>Privacy Policy</sub></a>
+</div>
+>>>>>>> 79293832969eb1bb370a176d58abebdf327c37f0
