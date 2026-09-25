@@ -2,16 +2,13 @@
 
 # XDownload
 
-**Your personal downloader for Telegram**
-
 *Link in → format → quality → file in chat*
 
 <img src="assets/XDownload Banner.jpg" alt="XDownload" width="760" />
 
 <img src="https://img.shields.io/badge/Telegram-bot-333333?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" />
-<img src="https://img.shields.io/badge/mp3-333333?style=flat-square" alt="mp3" />
-<img src="https://img.shields.io/badge/480%20%7C%20720%20%7C%201080p-333333?style=flat-square" alt="qualities" />
-<img src="https://img.shields.io/badge/anti--spam-333333?style=flat-square" alt="anti-spam" />
+<img src="https://img.shields.io/badge/video%20%2B%20audio-333333?style=flat-square" alt="video + audio" />
+<img src="https://img.shields.io/badge/up%20to%201080p-333333?style=flat-square" alt="up to 1080p" />
 
 </div>
 
@@ -145,12 +142,11 @@
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
 | **Restricted media** | Private / 18+ / region-locked may fail |
 | **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
-| **Privacy** | Nothing stored → [Privacy Policy](docs/privacy-policy.md) |
 
 ---
 
 <div align="center">
   <a href="LICENSE"><sub>License</sub></a>
   <sub> · </sub>
-  <a href="docs/privacy-policy.md"><sub>Privacy</sub></a>
+  <a href="PRIVACY-POLICY.md"><sub>Privacy Policy</sub></a>
 </div>

@@ -33,7 +33,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Println(`xcore - XDownloader download engine
+	fmt.Println(`xcore - XDownload download engine
 
 Usage:
   xcore info <url>                   Print track metadata as JSON

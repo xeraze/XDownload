@@ -48,7 +48,7 @@ CORE = ENV["XDL_CORE"] || begin
   File.join(base, exe)
 end
 
-WORKDIR = ENV["XDL_TMP"] || File.join(Dir.tmpdir, "xdownloader")
+WORKDIR = ENV["XDL_TMP"] || File.join(Dir.tmpdir, "xdownload")
 MAX_MB = if ENV["XDL_MAX_MB"] && !ENV["XDL_MAX_MB"].empty?
   ENV["XDL_MAX_MB"].to_i
 elsif BOT_API_URL =~ %r{127\.0\.0\.1|localhost|192\.168\.}
@@ -386,7 +386,7 @@ end
 Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
   bot.logger = Logger.new($stderr)
   bot.logger.level = Logger::INFO
-  bot.logger.info("XDownloader bot started")
+  bot.logger.info("XDownload bot started")
   begin
     bot.api.set_my_commands(
       commands: [

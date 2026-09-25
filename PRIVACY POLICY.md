@@ -1,6 +1,6 @@
-# Privacy Policy — XDownloader
+# Privacy Policy — XDownload
 
-XDownloader processes only the data needed for the bot to work: the media links you send (YouTube, Spotify, SoundCloud and other supported sites), your Telegram user ID (used to deliver the file), and the chat ID.
+XDownload processes only the data needed for the bot to work: the media links you send (YouTube, Spotify, SoundCloud and other supported sites), your Telegram user ID (used to deliver the file), and the chat ID.
 
 Downloaded files are stored temporarily on the server and deleted immediately after they are sent. Logs do not contain the contents of the links you share.
 
