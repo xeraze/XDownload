@@ -2,17 +2,15 @@
 
 # XDownload
 
-*Link in → format → quality → file in chat*
+*Link in → file*
 
-<img src="assets/XDownload Banner.jpg" alt="XDownload" width="760" />
+<img src="assets/xdownload-banner.svg" alt="XDownload" width="760" />
 
 <img src="https://img.shields.io/badge/Telegram-bot-333333?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" />
 <img src="https://img.shields.io/badge/video%20%2B%20audio-333333?style=flat-square" alt="video + audio" />
-<img src="https://img.shields.io/badge/up%20to%201080p-333333?style=flat-square" alt="up to 1080p" />
+<img src="https://img.shields.io/badge/up%20to%201080p-333333?style=flat-square" alt="480p/720p/1080p" />
 
 </div>
-
----
 
 ## How it works
 
@@ -33,8 +31,6 @@
 
 > Spotify & SoundCloud are **audio-only** — the bot shows only the audio button.
 
----
-
 ## Platforms
 
 <table>
@@ -52,7 +48,7 @@
       <b>SoundCloud</b><br/><sub>audio only</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://cdn.simpleicons.org/tiktok/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/tiktok/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
       <b>TikTok</b><br/><sub>audio + video</sub>
     </td>
   </tr>
@@ -70,7 +66,7 @@
       <b>Reddit</b><br/><sub>audio + video</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/pinterest/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/pinterest/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
       <b>Pinterest</b><br/><sub>audio + video</sub>
     </td>
   </tr>
@@ -80,7 +76,7 @@
       <b>VK</b><br/><sub>audio + video</sub>
     </td>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/x/9CA3AF" width="26" height="26" alt="" /><br/>
+      <img src="https://cdn.simpleicons.org/x/9CA3AF" width="20" height="20" style="vertical-align:middle" alt="" /><br/>
       <b>X (Twitter)</b><br/><sub>audio + video</sub>
     </td>
     <td align="center">
@@ -95,8 +91,6 @@
 </table>
 
 <p align="center"><sub>Allowlist — anything outside this grid is declined</sub></p>
-
----
 
 ## Features
 
@@ -133,20 +127,11 @@
   </tr>
 </table>
 
----
-
 ## Notes
 
 | | |
 |:--|:--|
 | **Personal use only** | May violate platform ToS; Telegram can block music bots |
 | **Restricted media** | Private / 18+ / region-locked may fail |
-| **File size** | Public Bot API ≈ 50 MB; local server raises the limit |
-
----
-
-<div align="center">
-  <a href="LICENSE"><sub>License</sub></a>
-  <sub> · </sub>
-  <a href="PRIVACY-POLICY.md"><sub>Privacy Policy</sub></a>
-</div>
+| **File size** | Up to 2 GB per file |
+| **Privacy** | Nothing stored → [Privacy Policy](docs/privacy-policy.md) |
