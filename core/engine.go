@@ -175,6 +175,23 @@ func downloadSpotify(url, dir string) int {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
 	}
+
+	// Fast path: track title via Spotify's oEmbed + yt-dlp search (~10 s).
+	path, fastErr := spotifyViaYouTube(url, dir)
+	if path != "" && fastErr == nil {
+		fmt.Println("RESULT:" + path)
+		return 0
+	}
+	if fastErr == nil {
+		fastErr = fmt.Errorf("no output file")
+	}
+
+	// Slow path: spotdl (proper Spotify metadata), used only when the fast
+	// path fails, and gated while Spotify is rate-limiting it.
+	if spotdlBlocked() {
+		fmt.Fprintln(os.Stderr, "error:", fastErr, "(spotdl cooling down, not tried)")
+		return 1
+	}
 	sub, err := os.MkdirTemp(dir, "spot-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -182,46 +199,30 @@ func downloadSpotify(url, dir string) int {
 	}
 	defer os.RemoveAll(sub)
 
-	var lastErr error
-	if spotdlBlocked() {
-		lastErr = fmt.Errorf("skipped (cooling down after Spotify rate-limit)")
-		fmt.Println("spotdl cooling down, going straight to YouTube search")
-	} else {
-		lastErr = runSpotDLOnce(url, sub)
-		if lastErr == nil {
-			latest, err := newestFile(sub)
-			switch {
-			case err != nil:
-				lastErr = err
-			case latest == "":
-				lastErr = fmt.Errorf("no output file")
-			default:
-				final := filepath.Join(dir, filepath.Base(latest))
-				if final != latest {
-					if err := os.Rename(latest, final); err != nil {
-						fmt.Fprintln(os.Stderr, "error:", err)
-						return 1
-					}
-					latest = final
+	lastErr := runSpotDLOnce(url, sub)
+	if lastErr == nil {
+		latest, err := newestFile(sub)
+		switch {
+		case err != nil:
+			lastErr = err
+		case latest == "":
+			lastErr = fmt.Errorf("no output file")
+		default:
+			final := filepath.Join(dir, filepath.Base(latest))
+			if final != latest {
+				if err := os.Rename(latest, final); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+					return 1
 				}
-				fmt.Println("RESULT:" + latest)
-				return 0
+				latest = final
 			}
+			fmt.Println("RESULT:" + latest)
+			return 0
 		}
 	}
 
-	fmt.Println("spotdl unavailable, using YouTube search:", lastErr)
-	path, err := spotifyFallback(url, dir)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-	if path == "" {
-		fmt.Fprintln(os.Stderr, "error: fallback finished but no output file was found")
-		return 1
-	}
-	fmt.Println("RESULT:" + path)
-	return 0
+	fmt.Fprintln(os.Stderr, "error: fast path:", fastErr, "; spotdl:", lastErr)
+	return 1
 }
 
 func runSpotDLOnce(url, sub string) error {
@@ -244,15 +245,15 @@ func runSpotDLOnce(url, sub string) error {
 	return nil
 }
 
-// spotifyFallback resolves the track title via Spotify's oEmbed endpoint
+// spotifyViaYouTube resolves the track title via Spotify's oEmbed endpoint
 // (which stays reachable when the main site is rate-limiting) and downloads
 // the first matching YouTube result directly with yt-dlp.
-func spotifyFallback(link, dir string) (string, error) {
+func spotifyViaYouTube(link, dir string) (string, error) {
 	title, err := oembedTitle(link)
 	if err != nil {
 		return "", fmt.Errorf("could not fetch track info from Spotify: %w", err)
 	}
-	fmt.Println("spotdl failed, searching YouTube for:", title)
+	fmt.Println("searching YouTube for:", title)
 	args := []string{
 		"--newline",
 		"--no-playlist",
