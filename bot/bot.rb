@@ -198,6 +198,8 @@ def friendly_error(err)
     "Download tool isn't installed on the server."
   when /ffmpeg/i
     "The server is missing ffmpeg — can't process this file."
+  when /could not fetch track info/i
+    "Couldn't read this Spotify link — try again in a minute."
   when /unsupported URL/i
     "This link isn't supported."
   when /private|unavailable|removed|no longer/i
@@ -208,6 +210,10 @@ def friendly_error(err)
     "YouTube rejected the download (403). Wait a minute and try again."
   when /no output file was found|track unavailable/i
     "This track isn't available to download right now — YouTube Music has no match for it."
+  when /Could not get session/i
+    "Couldn't reach Spotify to resolve this track — try again in a minute."
+  when /spotdl failed/i
+    "YouTube didn't respond — try again in a minute."
   else
     "Download failed. Try a different link, or make sure yt-dlp and ffmpeg are installed."
   end
@@ -331,6 +337,7 @@ def send_file(bot, chat_id, url, ext, height = 1080)
     args += ["--height", h.to_s] if h
     out, err, ok = core(*args, url)
     unless ok
+      bot.logger.error("core failed args=#{args.inspect} stderr=#{err}")
       bot.api.send_message(chat_id: chat_id, text: friendly_error(err.to_s))
       return
     end

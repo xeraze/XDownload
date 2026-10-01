@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type TrackInfo struct {
@@ -23,6 +27,35 @@ type TrackInfo struct {
 }
 
 var spotifyRe = regexp.MustCompile(`(?i)open\.spotify\.com|^spotify:`)
+
+// Spotify's WAF rate-limits spotdl's client for a while (HTTP 403 on the
+// session bootstrap). Remember that in a temp file (xcore runs as a fresh
+// process per download) and go straight to the yt-dlp fallback instead of
+// burning 20-30 s on a doomed spotdl run.
+const spotdlBlockWindow = 10 * time.Minute
+
+func spotdlCooldownFile() string {
+	return filepath.Join(os.TempDir(), "xdl-spotdl-cooldown")
+}
+
+func spotdlBlocked() bool {
+	b, err := os.ReadFile(spotdlCooldownFile())
+	if err != nil {
+		return false
+	}
+	until, err := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+	if err != nil {
+		return false
+	}
+	return time.Now().Before(time.Unix(until, 0))
+}
+
+func markSpotdlBlocked() {
+	until := time.Now().Add(spotdlBlockWindow)
+	if err := os.WriteFile(spotdlCooldownFile(), []byte(fmt.Sprint(until.Unix())), 0o644); err == nil {
+		fmt.Println("spotdl is rate-limited by Spotify, cooling down for", spotdlBlockWindow)
+	}
+}
 
 // yt-dlp's default YouTube client (with deno as the JS runtime) is the only
 // one that both lists formats and serves them without a GVS PO token.
@@ -148,35 +181,113 @@ func downloadSpotify(url, dir string) int {
 		return 1
 	}
 	defer os.RemoveAll(sub)
-	cmd := exec.Command("spotdl", "download", url, "--output", sub, "--format", "mp3",
-		"--bitrate", "320k",
-		"--yt-dlp-args", "--extractor-args youtube:player_client=android --retries 3 --fragment-retries 3")
-	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONUTF8=1")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "error: spotdl failed (pip install spotdl):", err)
-		return 1
+
+	var lastErr error
+	if spotdlBlocked() {
+		lastErr = fmt.Errorf("skipped (cooling down after Spotify rate-limit)")
+		fmt.Println("spotdl cooling down, going straight to YouTube search")
+	} else {
+		lastErr = runSpotDLOnce(url, sub)
+		if lastErr == nil {
+			latest, err := newestFile(sub)
+			switch {
+			case err != nil:
+				lastErr = err
+			case latest == "":
+				lastErr = fmt.Errorf("no output file")
+			default:
+				final := filepath.Join(dir, filepath.Base(latest))
+				if final != latest {
+					if err := os.Rename(latest, final); err != nil {
+						fmt.Fprintln(os.Stderr, "error:", err)
+						return 1
+					}
+					latest = final
+				}
+				fmt.Println("RESULT:" + latest)
+				return 0
+			}
+		}
 	}
-	latest, err := newestFile(sub)
+
+	fmt.Println("spotdl unavailable, using YouTube search:", lastErr)
+	path, err := spotifyFallback(url, dir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
 	}
-	if latest == "" {
-		fmt.Fprintln(os.Stderr, "error: spotdl finished but no output file was found (track unavailable on YouTube Music?)")
+	if path == "" {
+		fmt.Fprintln(os.Stderr, "error: fallback finished but no output file was found")
 		return 1
 	}
-	final := filepath.Join(dir, filepath.Base(latest))
-	if final != latest {
-		if err := os.Rename(latest, final); err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
-			return 1
-		}
-		latest = final
-	}
-	fmt.Println("RESULT:" + latest)
+	fmt.Println("RESULT:" + path)
 	return 0
+}
+
+func runSpotDLOnce(url, sub string) error {
+	cmd := exec.Command("spotdl", "download", url, "--output", sub, "--format", "mp3",
+		"--bitrate", "320k",
+		"--yt-dlp-args", "--extractor-args youtube:player_client=android --retries 3 --fragment-retries 3")
+	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONUTF8=1")
+	var out bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &out)
+	cmd.Stderr = io.MultiWriter(os.Stdout, &out)
+	err := cmd.Run()
+	log := out.String()
+	if err != nil {
+		if strings.Contains(log, "Could not get session") || strings.Contains(log, "Status Code: 403") {
+			markSpotdlBlocked()
+		}
+		return err
+	}
+	os.Remove(spotdlCooldownFile())
+	return nil
+}
+
+// spotifyFallback resolves the track title via Spotify's oEmbed endpoint
+// (which stays reachable when the main site is rate-limiting) and downloads
+// the first matching YouTube result directly with yt-dlp.
+func spotifyFallback(link, dir string) (string, error) {
+	title, err := oembedTitle(link)
+	if err != nil {
+		return "", fmt.Errorf("could not fetch track info from Spotify: %w", err)
+	}
+	fmt.Println("spotdl failed, searching YouTube for:", title)
+	args := []string{
+		"--newline",
+		"--no-playlist",
+		"--extract-audio",
+		"--audio-format", "mp3",
+		"--audio-quality", "0",
+		"--progress-template", "download:[%(progress._percent_str)s] %(progress._speed_str)s",
+		"--print", "after_move:FILE:%(filepath)s",
+		"-o", filepath.Join(dir, "%(title)s.%(ext)s"),
+		"ytsearch1:" + title,
+	}
+	return runYTDLPYouTube(args, dir)
+}
+
+func oembedTitle(link string) (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get("https://open.spotify.com/oembed?url=" + url.QueryEscape(link))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("spotify oembed HTTP %d", resp.StatusCode)
+	}
+	var payload struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	title := strings.TrimSpace(payload.Title)
+	if title == "" {
+		return "", fmt.Errorf("no track title in spotify response")
+	}
+	return title, nil
 }
 
 func newestFile(dir string) (string, error) {
