@@ -23,6 +23,20 @@
 
 > Spotify & SoundCloud are **audio-only** - the bot shows only the audio button.
 
+## Repository layout
+
+This is a monorepo containing every part of XDownload:
+
+| Path | What it is |
+|:--|:--|
+| [`core/`](core) | Go download engine + HTTP API (`xcore`) |
+| [`bot/`](bot) | Ruby Telegram bot |
+| [`web/`](web) | React + Vite web app ([live site](https://xeraze.github.io/XDownload/)) |
+| [`worker/`](worker) | Cloudflare Worker API proxy |
+| [`docs/`](docs) | Privacy policy |
+
+The web app talks to the Go API through the Cloudflare Worker (`worker/`). Locally the same API is exposed on `127.0.0.1:8083` with a dev proxy on `127.0.0.1:8080`.
+
 ## Platforms
 
 <table>

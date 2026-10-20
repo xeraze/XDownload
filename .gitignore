@@ -16,3 +16,8 @@ secrets/
 *~
 
 tools/
+
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+*.local

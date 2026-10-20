@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="night"] *));
+
+@font-face {
+  font-family: "Caveat";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./assets/fonts/caveat-cyrillic.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Caveat";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./assets/fonts/caveat-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Unbounded";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("./assets/fonts/unbounded-cyrillic.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Unbounded";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("./assets/fonts/unbounded-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --bg: #ffffff;
+  --ink: #111113;
+  --ink-soft: #63636b;
+  --line: rgb(17 17 19 / 0.08);
+  --line-strong: rgb(17 17 19 / 0.18);
+  --glass-bg: rgb(255 255 255 / 0.78);
+  --glass-bg-solid: rgb(255 255 255 / 0.94);
+  --glass-border: rgb(17 17 19 / 0.14);
+  --chip-bg: rgb(17 17 19 / 0.04);
+  --focus-ring: rgb(17 17 19 / 0.12);
+  color-scheme: light;
+}
+
+[data-theme="morning"] {
+  --bg: #f6f1e7;
+  --ink: #1c1914;
+  --ink-soft: #6e675b;
+  --line: rgb(28 25 20 / 0.1);
+  --line-strong: rgb(28 25 20 / 0.2);
+  --glass-bg: rgb(255 252 245 / 0.75);
+  --glass-bg-solid: rgb(255 252 245 / 0.94);
+  --glass-border: rgb(28 25 20 / 0.16);
+  --chip-bg: rgb(28 25 20 / 0.05);
+  --focus-ring: rgb(28 25 20 / 0.14);
+}
+
+[data-theme="night"] {
+  --bg: #0b0b0d;
+  --ink: #f2f2f4;
+  --ink-soft: #a0a0aa;
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.2);
+  --glass-bg: rgb(24 24 27 / 0.72);
+  --glass-bg-solid: rgb(24 24 27 / 0.94);
+  --glass-border: rgb(255 255 255 / 0.16);
+  --chip-bg: rgb(255 255 255 / 0.06);
+  --focus-ring: rgb(255 255 255 / 0.16);
+  color-scheme: dark;
+}
+
+.font-hand {
+  font-family: "Caveat", cursive;
+}
+
+.font-display {
+  font-family: "Unbounded", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 1px 2px rgb(17 17 19 / 0.05),
+    0 12px 40px rgb(17 17 19 / 0.07),
+    inset 0 1px 0 rgb(255 255 255 / 0.65);
+}
+
+[data-theme="night"] .glass {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 12px 40px rgb(0 0 0 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+.page-grid {
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: linear-gradient(to bottom, black 0, black 30%, transparent 85%);
+  mask-image: linear-gradient(to bottom, black 0, black 30%, transparent 85%);
+  animation: grid-drift 70s linear infinite;
+}
+
+.page-grid-glow {
+  background-image:
+    linear-gradient(var(--line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-strong) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: radial-gradient(
+    260px circle at var(--mx, -300px) var(--my, -300px),
+    black 0%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    260px circle at var(--mx, -300px) var(--my, -300px),
+    black 0%,
+    transparent 72%
+  );
+  animation: grid-drift 70s linear infinite;
+}
+
+@keyframes grid-drift {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      52px 52px,
+      52px 52px;
+  }
+}
+
+.spotlight {
+  background: radial-gradient(
+    560px circle at var(--mx, 50%) var(--my, 30%),
+    rgb(17 17 19 / 0.07),
+    transparent 72%
+  );
+}
+
+[data-theme="night"] .spotlight {
+  background: radial-gradient(
+    560px circle at var(--mx, 50%) var(--my, 30%),
+    rgb(255 255 255 / 0.09),
+    transparent 72%
+  );
+}
+
+.page-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+.phase-in {
+  animation: phase-in 0.28s ease-out;
+}
+
+@keyframes phase-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--chip-bg) 25%, var(--line) 50%, var(--chip-bg) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 38s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+.marquee-reverse .marquee-track {
+  animation-direction: reverse;
+  animation-duration: 46s;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+main > section,
+footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
+
+footer {
+  contain-intrinsic-size: auto 240px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .glass {
+    background: var(--glass-bg-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .page-grid {
+    animation: none;
+  }
+
+  .page-grid-glow,
+  .spotlight,
+  .page-grain {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .page-grid,
+  .page-grid-glow {
+    animation: none;
+  }
+}

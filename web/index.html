@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Download video and audio from 13 services directly in your browser. Free, no ad, no accounts." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="XDownload" />
+    <meta property="og:title" content="XDownload - video and audio downloader" />
+    <meta
+      property="og:description"
+      content="Download video and audio from 13 services directly in your browser. Free, no ad, no accounts."
+    />
+    <meta property="og:image" content="https://raw.githubusercontent.com/xeraze/XDownload-Web/main/src/assets/logo-round.png" />
+    <meta property="og:url" content="https://xeraze.github.io/XDownload-Web/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="XDownload - video and audio downloader" />
+    <meta
+      name="twitter:description"
+      content="Download video and audio from 13 services directly in your browser. Free, no ad, no accounts."
+    />
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/xeraze/XDownload-Web/main/src/assets/logo-round.png" />
+    <link rel="icon" type="image/png" href="./src/assets/logo-round.png" />
+    <script>
+      (function () {
+        var parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "Europe/Kyiv",
+          hourCycle: "h23",
+          weekday: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).formatToParts(new Date());
+        var get = function (type) {
+          for (var i = 0; i < parts.length; i += 1) if (parts[i].type === type) return parts[i].value;
+          return "";
+        };
+        var d = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[get("weekday")];
+        var t = parseInt(get("hour"), 10) * 60 + parseInt(get("minute"), 10);
+        var close = d === 5 || d === 6 ? 1290 : 1260;
+        document.documentElement.dataset.theme =
+          t < 360 ? "night" : t < 540 ? "morning" : t < close ? "day" : "night";
+      })();
+    </script>
+    <title>XDownload</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
