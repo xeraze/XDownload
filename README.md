@@ -78,8 +78,8 @@ The web app talks to the Go API through the Cloudflare Worker (`worker/`). Local
   </tr>
   <tr>
     <td align="center">
-      <img src="https://cdn.simpleicons.org/vk/9CA3AF" width="24" height="24" alt="" /><br/>
-      <b>VK</b><br/><sub>video/audio</sub>
+      <img src="assets/pornhub.ico" width="24" height="24" alt="" /><br/>
+      <b>PornHub</b><br/><sub>video/audio</sub>
     </td>
     <td align="center">
       <img src="https://cdn.simpleicons.org/x/9CA3AF" width="24" height="24" alt="" /><br/>

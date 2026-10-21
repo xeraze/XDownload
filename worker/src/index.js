@@ -12,7 +12,14 @@ const PASS = [
   "last-modified",
 ];
 
-const FWD = ["range", "if-range", "content-type"];
+const FWD = [
+  "range",
+  "if-range",
+  "content-type",
+  "user-agent",
+  "x-device-id",
+  "x-edit-token",
+];
 
 const buckets = new Map();
 
@@ -35,8 +42,8 @@ function allow(key, max) {
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Range",
+    "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Range, X-Device-Id, X-Edit-Token",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -51,6 +58,11 @@ export default {
     const url = new URL(request.url);
 
     if (!url.pathname.startsWith("/api/")) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    // Moderation endpoints are reachable from localhost only (bot/CLI).
+    if (url.pathname.startsWith("/api/admin/")) {
       return new Response("Not found", { status: 404 });
     }
 
@@ -72,7 +84,7 @@ export default {
       return new Response(null, { status: 204, headers });
     }
 
-    const write = request.method === "POST";
+    const write = request.method !== "GET" && request.method !== "HEAD";
     const ip = request.headers.get("cf-connecting-ip") || "unknown";
     if (!allow(`${write ? "w" : "r"}:${ip}`, write ? WRITE_MAX : READ_MAX)) {
       return new Response("Too many requests", { status: 429 });
@@ -85,6 +97,8 @@ export default {
 
     const headers = new Headers();
     headers.set("X-Api-Key", env.API_KEY || "");
+    // moderation: real client ip (never taken from the request body)
+    if (ip && ip !== "unknown") headers.set("X-Real-IP", ip);
     for (const name of FWD) {
       const value = request.headers.get(name);
       if (value) headers.set(name, value);

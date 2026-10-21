@@ -21,3 +21,8 @@ web/node_modules/
 web/dist/
 web/*.tsbuildinfo
 *.local
+
+/data/
+.admin-token
+.bot-token
+.bot-id

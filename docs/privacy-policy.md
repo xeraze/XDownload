@@ -10,6 +10,10 @@ XDownload is a Telegram bot for personal use. You send a link, choose a format (
 
 The link you send is used only to fetch and process the requested media in memory/temporary storage for the duration of that single request. Once the file is sent back to you, nothing related to that request remains on the server.
 
+## Reviews and moderation
+
+Reviews are the only stored user content. If you leave a review on the website or through the bot, the service stores the review itself (rating, comment, displayed name) plus — visible only to the service owner — your IP address and device/browser type at the moment you submit it. This data exists solely for moderation: for spam, insults or other junk access may be closed by command, after which attempts to leave a review or download a file are refused with a message stating the reason. Other users never see your IP address, device or any other private field, and this data is used nowhere else.
+
 ## Third parties
 
 The bot does not use any third-party download APIs or external services. Downloading is handled entirely by the bot's own instance of yt-dlp, running on infrastructure controlled by the bot operator. No user data is shared with, or passed to, any outside party.

@@ -25,6 +25,10 @@ func main() {
 		code = cmdSpotify(os.Args[2:])
 	case "api":
 		code = cmdAPI(os.Args[2:])
+	case "review":
+		code = cmdReview(os.Args[2:])
+	case "block":
+		code = cmdBlock(os.Args[2:])
 	case "version":
 		fmt.Println("xcore", version)
 		code = 0
@@ -45,9 +49,12 @@ Usage:
                                      resolution). Spotify urls auto-route to spotdl (audio only)
   xcore spotify --dir DIR <url>      Download via spotdl
   xcore api [--addr ADDR] [--dir DIR] Serve the HTTP API for the web app
-                                     (env: XDL_API_ADDR, XDL_API_DIR, XDL_API_KEY,
-                                      XDL_API_CONCURRENCY, XDL_API_MAX,
-                                      XDL_API_TTL_MIN, XDL_API_TIMEOUT_MIN)
+                                      (env: XDL_API_ADDR, XDL_API_DIR, XDL_API_KEY,
+                                       XDL_API_CONCURRENCY, XDL_API_MAX,
+                                       XDL_API_TTL_MIN, XDL_API_TIMEOUT_MIN)
+  xcore review list|add|delete         moderate reviews (admin token: XDL_ADMIN_TOKEN
+                                       or .admin-token file; talks to the running API)
+  xcore block list|add|remove          ban/unban an ip or device id
   xcore version`)
 }
 

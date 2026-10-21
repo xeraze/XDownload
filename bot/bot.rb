@@ -6,6 +6,9 @@ require "open3"
 require "securerandom"
 require "rbconfig"
 require "uri"
+require "base64"
+require "net/http"
+require "time"
 
 TOKEN = ENV.fetch("XDL_BOT_TOKEN") { abort "Set XDL_BOT_TOKEN environment variable" }
 BOT_API_URL = ENV["XDL_BOT_API"] || "https://api.telegram.org"
@@ -39,7 +42,7 @@ HELP_EN = <<~TEXT.freeze
   • Spotify
   • SoundCloud
   • TikTok, Instagram, Facebook
-  • Reddit, Pinterest, VK
+  • Reddit, Pinterest, PornHub
   • X (Twitter), Rumble
   • Snapchat
 
@@ -49,6 +52,7 @@ HELP_EN = <<~TEXT.freeze
   • Buttons (format / quality) have no cooldown
   • Private / 18+ / region-locked media may not be downloadable
   • Telegram limits file size on public bots
+  • /review — leave a rating and a comment
 TEXT
 
 HELP_RU = <<~TEXT.freeze
@@ -64,7 +68,7 @@ HELP_RU = <<~TEXT.freeze
   • Spotify
   • SoundCloud
   • TikTok, Instagram, Facebook
-  • Reddit, Pinterest, VK
+  • Reddit, Pinterest, PornHub
   • X (Twitter), Rumble
   • Snapchat
 
@@ -74,6 +78,7 @@ HELP_RU = <<~TEXT.freeze
   • Кнопки (формат / качество) без кулдауна
   • Приватный / 18+ / региональный контент может не скачиваться
   • Telegram ограничивает размер файла в публичных ботах
+  • /review — оставить оценку и комментарий
 TEXT
 
 STR = {
@@ -115,7 +120,15 @@ STR = {
     announce_header: "Developer announcement",
     announce_usage: "Usage: /notice <text>",
     unknown_cmd: "Unknown command. Try /help.",
-    announce_sent: "Sent to %{n} chats."
+    announce_sent: "Sent to %{n} chats.",
+    review_private: "Leave a review in a direct message with me — just tap /review there.",
+    review_rate: "How would you rate the service?",
+    review_comment_ask: "Rating: %{stars}.\nAdd a comment (or send /skip):",
+    review_done: "Thanks! Your review is published.",
+    review_blocked: "You can't leave reviews: %{reason}",
+    review_cooldown: "You already left a review — try again in %{s}s.",
+    review_error: "Couldn't send the review. Try again in a minute.",
+    review_expired: "The review request expired. Send /review again."
   },
   ru: {
     start: START_RU,
@@ -155,7 +168,15 @@ STR = {
     announce_header: "Уведомление от разработчика",
     announce_usage: "Использование: /notice <текст>",
     unknown_cmd: "Неизвестная команда. Попробуйте /help.",
-    announce_sent: "Отправлено в %{n} чатов."
+    announce_sent: "Отправлено в %{n} чатов.",
+    review_private: "Оставляйте отзыв в личных сообщениях — просто отправьте там /review.",
+    review_rate: "Оцените сервис от 1 до 5:",
+    review_comment_ask: "Оценка: %{stars}.\nДобавьте комментарий (или отправьте /skip):",
+    review_done: "Спасибо! Ваш отзыв опубликован.",
+    review_blocked: "Вы не можете оставлять отзывы: %{reason}",
+    review_cooldown: "Вы уже оставляли отзыв — попробуйте через %{s}с.",
+    review_error: "Не удалось отправить отзыв. Попробуйте ещё раз через минуту.",
+    review_expired: "Время на отзыв вышло. Отправьте /review ещё раз."
   }
 }.freeze
 
@@ -239,7 +260,7 @@ ALLOWED_HOSTS = %w[
   reddit.com
   redd.it
   pin.it
-  vk.com
+  pornhub.com
   x.com
   twitter.com
   rumble.com
@@ -384,6 +405,7 @@ def handle_callback(bot, cb)
   when /\Adl:/ then handle_format_choice(bot, cb, data)
   when /\Aqv:/ then handle_quality_choice(bot, cb, data)
   when /\Alang:/ then handle_lang_choice(bot, cb, data)
+  when /\Arev:/ then handle_review_rating(bot, cb, data)
   end
 end
 
@@ -616,6 +638,232 @@ def broadcast_notice(bot, body)
   sent
 end
 
+# --- reviews: state, core API client, avatars, admin notifications --------
+
+CORE_API = ENV["XDL_API_URL"] || "http://127.0.0.1:8083"
+REVIEW_NOTIFY_SEC = Integer(ENV.fetch("XDL_REVIEW_NOTIFY_SEC", "20"))
+REVIEW_TTL_SEC = 300
+
+REVIEW_STATE = {} # user_id => { rating:, at: }
+REVIEW_STATE_MUTEX = Mutex.new
+
+def admin_token
+  @admin_token ||= begin
+    tok = ENV["XDL_ADMIN_TOKEN"].to_s.strip
+    if tok.empty?
+      path = File.expand_path("../.admin-token", __dir__)
+      tok = File.read(path).strip if File.file?(path)
+    end
+    tok
+  end
+end
+
+# Talk to the local xcore API over HTTP: it is the single writer of the
+# reviews store, so the bot never touches those files directly.
+def core_api(method, path, body = nil)
+  uri = URI.parse(CORE_API + path)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = uri.scheme == "https"
+  http.open_timeout = 5
+  http.read_timeout = 20
+  req = case method
+        when :post then Net::HTTP::Post.new(uri)
+        when :put then Net::HTTP::Put.new(uri)
+        else Net::HTTP::Get.new(uri)
+        end
+  req["X-Admin-Token"] = admin_token
+  if body
+    req["Content-Type"] = "application/json"
+    req.body = JSON.generate(body)
+  end
+  resp = http.request(req)
+  parsed = begin
+    JSON.parse(resp.body)
+  rescue StandardError
+    {}
+  end
+  [resp.code.to_i, parsed]
+rescue StandardError => e
+  [0, { "error" => e.message }]
+end
+
+def tg_display_name(user)
+  return "Telegram user" if user.nil?
+
+  name = [user.first_name, user.last_name].compact.map { |s| s.to_s.strip }.reject(&:empty?).join(" ")
+  name = "@#{user.username}" if name.empty? && user.username
+  name = "Telegram user" if name.empty?
+  name[0, 64]
+end
+
+# Largest profile photo as base64, or nil when the user has none.
+# The local Bot API server hands back an absolute file path, the hosted one
+# a relative path to fetch over HTTP — support both.
+def fetch_tg_avatar(bot, user_id)
+  photos = bot.api.get_user_profile_photos(user_id: user_id, limit: 1)
+  return nil unless photos.respond_to?(:photos) && photos.total_count.to_i.positive?
+
+  set = photos.photos.first
+  return nil if set.nil? || set.empty?
+
+  biggest = set.max_by { |p| (p.file_size rescue nil).to_i }
+  file = bot.api.get_file(file_id: biggest.file_id)
+  path = file.respond_to?(:file_path) ? file.file_path : nil
+  return nil if path.nil? || path.empty?
+
+  data = if File.file?(path)
+           File.binread(path)
+         else
+           uri = URI.parse("#{BOT_API_URL}/file/bot#{TOKEN}/#{path}")
+           http = Net::HTTP.new(uri.host, uri.port)
+           http.use_ssl = uri.scheme == "https"
+           http.open_timeout = 5
+           http.read_timeout = 15
+           http.get(uri.request_uri).body
+         end
+  return nil if data.nil? || data.empty? || data.bytesize > 2 * 1024 * 1024
+
+  ext = File.extname(path).delete_prefix(".").downcase
+  ext = "jpg" if ext.empty?
+  { "b64" => Base64.strict_encode64(data), "ext" => ext }
+rescue StandardError => e
+  bot.logger.warn("avatar fetch failed: #{e.class}: #{e.message}") if bot.respond_to?(:logger)
+  nil
+end
+
+def submit_review(bot, user, rating, comment)
+  payload = {
+    "rating" => rating,
+    "text" => comment.to_s.strip[0, 2000].to_s,
+    "source" => "bot",
+    "identity" => "tg:#{user.id}",
+    "author" => tg_display_name(user),
+    "tg_id" => user.id
+  }
+  payload["tg_username"] = "@#{user.username}" if user.username
+  avatar = fetch_tg_avatar(bot, user.id)
+  if avatar
+    payload["avatar_b64"] = avatar["b64"]
+    payload["avatar_ext"] = avatar["ext"]
+  end
+  core_api(:post, "/api/admin/reviews", payload)
+end
+
+def review_start(bot, chat_id, user)
+  buttons = (1..5).map do |n|
+    Telegram::Bot::Types::InlineKeyboardButton.new(
+      text: "⭐ #{n}",
+      callback_data: "rev:#{SecureRandom.hex(6)}:#{n}"
+    )
+  end
+  kb = Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: [buttons])
+  bot.api.send_message(chat_id: chat_id, text: t(chat_id, :review_rate), reply_markup: kb)
+end
+
+def handle_review_rating(bot, cb, data)
+  _cmd, _token, stars = data.split(":")
+  n = stars.to_i
+  user = cb.from
+  return bot.api.answer_callback_query(callback_query_id: cb.id) unless user && (1..5).cover?(n)
+
+  chat_id = cb.message.chat.id
+  REVIEW_STATE_MUTEX.synchronize do
+    REVIEW_STATE.delete_if { |_k, v| Time.now.to_f - v[:at] > REVIEW_TTL_SEC }
+    REVIEW_STATE[user.id] = { rating: n, at: Time.now.to_f }
+  end
+  bot.api.answer_callback_query(callback_query_id: cb.id)
+  bot.api.edit_message_text(
+    chat_id: chat_id,
+    message_id: cb.message.message_id,
+    text: t(chat_id, :review_comment_ask, stars: "⭐ #{n}"),
+    reply_markup: Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: [])
+  )
+rescue StandardError => e
+  bot.logger.warn("review rating: #{e.message}")
+end
+
+def review_pending?(user_id)
+  return false unless user_id
+
+  state = REVIEW_STATE_MUTEX.synchronize { REVIEW_STATE[user_id] }
+  return false if state.nil?
+
+  if Time.now.to_f - state[:at] > REVIEW_TTL_SEC
+    REVIEW_STATE_MUTEX.synchronize { REVIEW_STATE.delete(user_id) }
+    return false
+  end
+  true
+end
+
+def finish_review(bot, update, comment)
+  chat_id = update.chat.id
+  user = update.from
+  state = REVIEW_STATE_MUTEX.synchronize { REVIEW_STATE.delete(user.id) }
+  return if state.nil?
+
+  code, body = submit_review(bot, user, state[:rating], comment)
+  msg = case code
+        when 200 then t(chat_id, :review_done)
+        when 403 then t(chat_id, :review_blocked, reason: body["reason"].to_s.empty? ? "rules" : body["reason"])
+        when 429 then t(chat_id, :review_cooldown, s: body["retry"].to_s.empty? ? "60" : body["retry"])
+        else t(chat_id, :review_error)
+        end
+  bot.api.send_message(chat_id: chat_id, text: msg)
+rescue StandardError => e
+  bot.logger.warn("finish review: #{e.message}")
+end
+
+# Admin sees ip + device only here, and only when a review arrives.
+def notice_review(rev)
+  rating = rev["rating"].to_i
+  source = rev["source"].to_s
+  lines = ["Новый отзыв: ⭐ #{rating}/5"]
+  lines << "Источник: #{source == "bot" ? "Telegram-бот" : "сайт"}"
+  lines << "Автор: #{rev["author"]}"
+  text = rev["text"].to_s
+  lines << "Текст: #{text}" unless text.empty?
+  if source == "bot"
+    lines << "TG: #{rev["tg_username"] || "—"} (id #{rev["tg_id"]})"
+  else
+    lines << "IP: #{rev["ip"]}"
+    lines << "Устройство: #{rev["user_agent"]}"
+    lines << "Device id: #{rev["identity"].to_s.delete_prefix("dev:")}"
+  end
+  created = begin
+    Time.parse(rev["created_at"].to_s)
+  rescue StandardError
+    nil
+  end
+  lines << "Дата: #{created ? created.getlocal.strftime("%Y-%m-%d %H:%M:%S") : rev["created_at"]}"
+  lines << "ID: #{rev["id"]}"
+  lines.join("\n")
+end
+
+def start_review_poller(bot)
+  if admin_token.empty?
+    bot.logger.warn("review poller off: no admin token")
+    return
+  end
+  Thread.new do
+    loop do
+      sleep REVIEW_NOTIFY_SEC
+      begin
+        code, body = core_api(:get, "/api/admin/reviews?notified=false")
+        next unless code == 200 && body.is_a?(Array)
+
+        body.each do |rev|
+          next if rev["id"].to_s.empty?
+
+          bot.api.send_message(chat_id: ADMIN_ID, text: notice_review(rev))
+          core_api(:put, "/api/admin/reviews/#{rev["id"]}/notified")
+        end
+      rescue StandardError => e
+        bot.logger.warn("review poll: #{e.message}")
+      end
+    end
+  end
+end
+
 Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
   bot.logger = Logger.new($stderr)
   bot.logger.level = Logger::INFO
@@ -625,7 +873,8 @@ Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
       commands: [
         { command: "start", description: "Start the bot" },
         { command: "help", description: "How it works" },
-        { command: "lang", description: "Change language" }
+        { command: "lang", description: "Change language" },
+        { command: "review", description: "Leave a review" }
       ]
     )
     bot.api.set_my_commands(
@@ -633,7 +882,8 @@ Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
       commands: [
         { command: "start", description: "Start the bot" },
         { command: "help", description: "How it works" },
-        { command: "lang", description: "Change language" }
+        { command: "lang", description: "Change language" },
+        { command: "review", description: "Leave a review" }
       ]
     )
     bot.api.set_my_commands(
@@ -641,13 +891,15 @@ Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
       commands: [
         { command: "start", description: "Запустить бота" },
         { command: "help", description: "Как это работает" },
-        { command: "lang", description: "Сменить язык" }
+        { command: "lang", description: "Сменить язык" },
+        { command: "review", description: "Оставить отзыв" }
       ]
     )
     bot.logger.info("set_my_commands ok")
   rescue StandardError => e
     bot.logger.warn("set_my_commands failed: #{e.message}")
   end
+  start_review_poller(bot)
   bot.listen do |update|
     case update
     when Telegram::Bot::Types::CallbackQuery
@@ -684,7 +936,17 @@ Telegram::Bot::Client.run(TOKEN, url: BOT_API_URL) do |bot|
         else
           bot.api.send_message(chat_id: chat_id, text: t(chat_id, :unknown_cmd))
         end
+      when "/review"
+        if update.chat.type == "private"
+          review_start(bot, chat_id, update.from)
+        else
+          bot.api.send_message(chat_id: chat_id, text: t(chat_id, :review_private))
+        end
       else
+        if review_pending?(update.from&.id)
+          finish_review(bot, update, text.start_with?("/skip") ? "" : text)
+          next
+        end
         url = extract_url(text)
         if url.nil?
           bot.api.send_message(chat_id: chat_id, text: t(chat_id, :need_link))

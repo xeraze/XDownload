@@ -9,14 +9,16 @@ export interface JobStatus {
   message?: string;
 }
 
-export type ApiErrorKind = "unsupported" | "generic";
+export type ApiErrorKind = "unsupported" | "blocked" | "generic";
 
 export class ApiError extends Error {
   kind: ApiErrorKind;
+  reason?: string;
 
-  constructor(kind: ApiErrorKind) {
+  constructor(kind: ApiErrorKind, reason?: string) {
     super(kind);
     this.kind = kind;
+    this.reason = reason;
   }
 }
 
@@ -39,6 +41,13 @@ export async function createJob(
     signal: AbortSignal.timeout(15000),
   });
   if (response.status === 400 || response.status === 415) throw new ApiError("unsupported");
+  if (response.status === 403) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      reason?: string;
+    } | null;
+    if (body?.error === "blocked") throw new ApiError("blocked", body.reason);
+  }
   if (!response.ok) throw new ApiError("generic");
   const data = (await response.json()) as { id?: string };
   if (!data.id) throw new ApiError("generic");

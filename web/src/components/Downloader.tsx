@@ -13,7 +13,7 @@ import type { DownloadEntry } from "../lib/history";
 import { announceOpens, openAnnounce, type ScheduleState } from "../lib/schedule";
 
 type Phase = "idle" | "format" | "quality" | "working" | "done" | "error";
-type ErrorKey = "offline" | "unsupported" | "generic" | "pause";
+type ErrorKey = "offline" | "unsupported" | "blocked" | "generic" | "pause";
 
 interface Props {
   state: ScheduleState;
@@ -28,6 +28,7 @@ export default function Downloader({ state, onDownloaded }: Props) {
   const [progress, setProgress] = useState<number | null>(null);
   const [file, setFile] = useState<{ name: string; size?: number } | null>(null);
   const [errorKey, setErrorKey] = useState<ErrorKey>("generic");
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
   const [saveErr, setSaveErr] = useState(false);
 
@@ -38,7 +39,12 @@ export default function Downloader({ state, onDownloaded }: Props) {
 
   const mapError = (err: unknown) => {
     if (err instanceof ApiError) {
-      setErrorKey(err.kind === "unsupported" ? "unsupported" : "generic");
+      if (err.kind === "blocked") {
+        setBlockedReason(err.reason ?? null);
+        setErrorKey("blocked");
+      } else {
+        setErrorKey(err.kind === "unsupported" ? "unsupported" : "generic");
+      }
     } else {
       setErrorKey("offline");
     }
@@ -166,7 +172,11 @@ export default function Downloader({ state, onDownloaded }: Props) {
         ? t("dl.errOffline")
         : errorKey === "unsupported"
           ? t("dl.errUnsupported")
-          : t("dl.errGeneric");
+          : errorKey === "blocked"
+            ? blockedReason
+              ? t("dl.errBlocked", { reason: blockedReason })
+              : t("dl.errBlockedPlain")
+            : t("dl.errGeneric");
 
   return (
     <div className="glass rounded-3xl p-6 transition-colors focus-within:border-[color:var(--ink-soft)] sm:p-8">

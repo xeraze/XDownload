@@ -10,9 +10,10 @@ import HowPage from "./components/HowPage";
 import ServicesPage from "./components/ServicesPage";
 import Tool from "./components/Tool";
 import Privacy from "./components/Privacy";
+import Reviews from "./components/Reviews";
 import Footer from "./components/Footer";
 
-const TOP_ROUTES = ["", "#home", "#download", "#downloads", "#privacy", "#how", "#services"];
+const TOP_ROUTES = ["", "#home", "#download", "#downloads", "#privacy", "#how", "#services", "#reviews"];
 const FINE_POINTER = window.matchMedia("(pointer: fine)").matches;
 
 export default function App() {
@@ -65,7 +66,9 @@ export default function App() {
           ? "how"
           : route === "#services"
             ? "services"
-            : "home";
+            : route === "#reviews"
+              ? "reviews"
+              : "home";
 
   return (
     <div
@@ -90,6 +93,8 @@ export default function App() {
           <HowPage />
         ) : view === "services" ? (
           <ServicesPage />
+        ) : view === "reviews" ? (
+          <Reviews />
         ) : (
           <>
             <Hero />

@@ -23,6 +23,9 @@ export default function Footer() {
           <a href="#privacy" className="transition-colors hover:text-[color:var(--ink)]">
             {t("footer.privacy")}
           </a>
+          <a href="#reviews" className="transition-colors hover:text-[color:var(--ink)]">
+            {t("nav.reviews")}
+          </a>
         </div>
       </div>
     </footer>

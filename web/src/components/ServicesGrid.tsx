@@ -8,12 +8,20 @@ import IconSnapchat from "~icons/simple-icons/snapchat";
 import IconSoundcloud from "~icons/simple-icons/soundcloud";
 import IconSpotify from "~icons/simple-icons/spotify";
 import IconTiktok from "~icons/simple-icons/tiktok";
-import IconVk from "~icons/simple-icons/vk";
 import IconX from "~icons/simple-icons/x";
 import IconYoutube from "~icons/simple-icons/youtube";
 import IconYoutubemusic from "~icons/simple-icons/youtubemusic";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+
+function IconPornhub(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M4 6h8a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3Z" />
+      <path d="M16.5 10.32 19.8 8c.66-.47 1.6.04 1.6.88v6.24c0 .84-.94 1.35-1.6.88l-3.3-2.3v-3.4Z" />
+    </svg>
+  );
+}
 
 interface Service {
   name: string;
@@ -31,7 +39,7 @@ const SERVICES: Service[] = [
   { name: "Facebook", icon: IconFacebook, video: true },
   { name: "Reddit", icon: IconReddit, video: true },
   { name: "Pinterest", icon: IconPinterest, video: true },
-  { name: "VK", icon: IconVk, video: true },
+  { name: "PornHub", icon: IconPornhub, video: true },
   { name: "X (Twitter)", icon: IconX, video: true },
   { name: "Rumble", icon: IconRumble, video: true },
   { name: "Snapchat", icon: IconSnapchat, video: true },

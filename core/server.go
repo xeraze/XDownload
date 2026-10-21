@@ -52,6 +52,12 @@ type apiServer struct {
 	ttl     time.Duration
 	timeout time.Duration
 	maxJobs int
+
+	// reviews / moderation
+	store          *store
+	adminToken     string
+	reviewMu       sync.Mutex
+	reviewCooldown map[string]time.Time
 }
 
 type fileRef struct {
@@ -80,7 +86,7 @@ var allowedHosts = []string{
 	"reddit.com",
 	"redd.it",
 	"pin.it",
-	"vk.com",
+	"pornhub.com",
 	"x.com",
 	"twitter.com",
 	"rumble.com",
@@ -140,12 +146,29 @@ func cmdAPI(args []string) int {
 	mux.HandleFunc("GET /api/job/{id}", s.handleJob)
 	mux.HandleFunc("GET /api/file/{id}", s.handleFile)
 
+	// public reviews
+	mux.HandleFunc("GET /api/reviews", s.handleListReviews)
+	mux.HandleFunc("GET /api/reviews/mine", s.handleMyReview)
+	mux.HandleFunc("POST /api/reviews", s.handleCreateReview)
+	mux.HandleFunc("PUT /api/reviews/{id}", s.handleUpdateReview)
+	mux.HandleFunc("DELETE /api/reviews/{id}", s.handleDeleteReview)
+	mux.HandleFunc("GET /api/reviews/avatar/{id}", s.handleReviewAvatar)
+
+	// admin reviews + blocks
+	mux.HandleFunc("GET /api/admin/reviews", s.handleAdminListReviews)
+	mux.HandleFunc("POST /api/admin/reviews", s.handleAdminCreateReview)
+	mux.HandleFunc("DELETE /api/admin/reviews/{id}", s.handleAdminDeleteReview)
+	mux.HandleFunc("PUT /api/admin/reviews/{id}/notified", s.handleAdminMarkNotified)
+	mux.HandleFunc("GET /api/admin/blocks", s.handleAdminListBlocks)
+	mux.HandleFunc("POST /api/admin/blocks", s.handleAdminAddBlock)
+	mux.HandleFunc("DELETE /api/admin/blocks/{id}", s.handleAdminRemoveBlock)
+
 	srv := &http.Server{
 		Addr:              *addr,
 		Handler:           s.guard(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("xcore api listening on http://%s (dir=%s, key=%v)", *addr, *dir, s.key != "")
+	log.Printf("xcore api listening on http://%s (dir=%s, key=%v, admin=%v, data=%s)", *addr, *dir, s.key != "", s.adminToken != "", s.store.dir)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Println("api server:", err)
 		return 1
@@ -155,13 +178,16 @@ func cmdAPI(args []string) int {
 
 func newAPIServer(dir string) *apiServer {
 	return &apiServer{
-		jobs:    make(map[string]*apiJob),
-		sem:     make(chan struct{}, envInt("XDL_API_CONCURRENCY", 2)),
-		dir:     dir,
-		key:     os.Getenv("XDL_API_KEY"),
-		ttl:     time.Duration(envInt("XDL_API_TTL_MIN", 30)) * time.Minute,
-		timeout: time.Duration(envInt("XDL_API_TIMEOUT_MIN", 15)) * time.Minute,
-		maxJobs: envInt("XDL_API_MAX", 8),
+		jobs:           make(map[string]*apiJob),
+		sem:            make(chan struct{}, envInt("XDL_API_CONCURRENCY", 2)),
+		dir:            dir,
+		key:            os.Getenv("XDL_API_KEY"),
+		ttl:            time.Duration(envInt("XDL_API_TTL_MIN", 30)) * time.Minute,
+		timeout:        time.Duration(envInt("XDL_API_TIMEOUT_MIN", 15)) * time.Minute,
+		maxJobs:        envInt("XDL_API_MAX", 8),
+		store:          newStore(dataDir()),
+		adminToken:     os.Getenv("XDL_ADMIN_TOKEN"),
+		reviewCooldown: make(map[string]time.Time),
 	}
 }
 
@@ -180,13 +206,13 @@ func (s *apiServer) prepareDir() {
 }
 
 func (s *apiServer) guard(next http.Handler) http.Handler {
-	if s.key == "" {
-		return next
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !hmac.Equal([]byte(r.Header.Get("X-Api-Key")), []byte(s.key)) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
-			return
+		// admin routes authenticate via X-Admin-Token inside requireAdmin.
+		if !strings.HasPrefix(r.URL.Path, "/api/admin/") {
+			if s.key != "" && !hmac.Equal([]byte(r.Header.Get("X-Api-Key")), []byte(s.key)) {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -230,6 +256,10 @@ type downloadRequest struct {
 }
 
 func (s *apiServer) handleDownload(w http.ResponseWriter, r *http.Request) {
+	if b := s.checkBlocked(r); b != nil {
+		writeBlocked(w, b)
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	var req downloadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
