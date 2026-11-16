@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -364,11 +363,15 @@ func runSpotDLOnce(ctx context.Context, url, sub string) error {
 }
 
 func spotifyViaYouTube(ctx context.Context, link, dir string, onProgress func(float64)) (string, error) {
-	title, err := oembedTitle(link)
+	m, err := spotifyPageMeta(link)
 	if err != nil {
-		return "", fmt.Errorf("could not fetch track info from Spotify: %w", err)
+		return "", err
 	}
-	fmt.Println("searching YouTube for:", title)
+	fmt.Printf("spotify match: %s - %s (%ds)\n", m.artist, m.title, m.duration)
+	video, err := pickYouTubeVideo(ctx, m)
+	if err != nil {
+		return "", err
+	}
 	args := []string{
 		"--newline",
 		"--progress",
@@ -380,7 +383,7 @@ func spotifyViaYouTube(ctx context.Context, link, dir string, onProgress func(fl
 		"--print", "after_move:FILE:%(filepath)s",
 		"--print", "after_move:META:%(extractor_key)s|%(id)s|%(height)s",
 		"-o", filepath.Join(dir, "%(id)s.%(ext)s"),
-		"ytsearch1:" + title,
+		video,
 	}
 	path, meta, err := runYTDLPYouTube(ctx, args, dir, onProgress)
 	if err != nil {
@@ -389,27 +392,93 @@ func spotifyViaYouTube(ctx context.Context, link, dir string, onProgress func(fl
 	return renameService(path, prettyExtractor(meta.extractor), "audio", meta.id, meta.height)
 }
 
-func oembedTitle(link string) (string, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get("https://open.spotify.com/oembed?url=" + url.QueryEscape(link))
+// trackMeta is what we know about the Spotify track before matching a video.
+type trackMeta struct {
+	title    string
+	artist   string
+	duration int
+}
+
+// spotifyPageMeta scrapes server-rendered meta tags from the track page.
+// A crawler UA is required: the normal page is a JS shell without them.
+func spotifyPageMeta(link string) (*trackMeta, error) {
+	canonical := link
+	if id := spotifyTrackID(link); id != "" {
+		canonical = "https://open.spotify.com/track/" + id
+	}
+	req, err := http.NewRequest(http.MethodGet, canonical, nil)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+	client := &http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("spotify oembed HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("spotify page HTTP %d", resp.StatusCode)
 	}
-	var payload struct {
-		Title string `json:"title"`
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+	page := string(body)
+	metaTag := func(name string) string {
+		pat := `(?i)<meta (?:name|property)="` + regexp.QuoteMeta(name) + `" content="([^"]*)"`
+		if m := regexp.MustCompile(pat).FindStringSubmatch(page); m != nil {
+			return strings.TrimSpace(m[1])
+		}
+		return ""
 	}
-	title := strings.TrimSpace(payload.Title)
-	if title == "" {
-		return "", fmt.Errorf("no track title in spotify response")
+	m := &trackMeta{title: metaTag("og:title"), artist: metaTag("music:musician_description")}
+	if d := metaTag("music:duration"); d != "" {
+		m.duration, _ = strconv.Atoi(d)
 	}
-	return title, nil
+	if m.title == "" || m.artist == "" || m.duration <= 0 {
+		return nil, fmt.Errorf("incomplete track metadata from spotify")
+	}
+	return m, nil
+}
+
+// pickYouTubeVideo searches YouTube for the track and returns the first
+// candidate whose duration matches the Spotify one, so a same-named song by
+// a different artist is never picked by accident. On mismatch it errors and
+// the caller falls back to spotdl, which does proper matching itself.
+func pickYouTubeVideo(ctx context.Context, m *trackMeta) (string, error) {
+	query := fmt.Sprintf("%q %s", m.title, m.artist)
+	cmd := exec.CommandContext(ctx, "yt-dlp",
+		"--flat-playlist", "--dump-json", "--playlist-end", "10", "ytsearch10:"+query)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("youtube search failed: %w", err)
+	}
+	tolerance := 3
+	if m.duration > 180 {
+		tolerance = 6
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var c struct {
+			ID       string `json:"id"`
+			Duration int    `json:"duration"`
+		}
+		if json.Unmarshal([]byte(line), &c) != nil || c.ID == "" {
+			continue
+		}
+		diff := c.Duration - m.duration
+		if diff < 0 {
+			diff = -diff
+		}
+		if c.Duration > 0 && diff <= tolerance {
+			return "https://www.youtube.com/watch?v=" + c.ID, nil
+		}
+	}
+	return "", fmt.Errorf("no youtube video within %ds of %q (%ds)", tolerance, query, m.duration)
 }
 
 func newestFile(dir string) (string, error) {

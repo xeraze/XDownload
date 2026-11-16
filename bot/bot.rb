@@ -180,16 +180,21 @@ STR = {
   }
 }.freeze
 
-LANG_FILE = File.join(Dir.tmpdir, "xdl-lang.txt")
+LANG_FILE = File.join(__dir__, "langs.txt")
+OLD_LANG_FILE = File.join(Dir.tmpdir, "xdl-lang.txt")
 LANG_CACHE = {}
 LANG_MUTEX = Mutex.new
 
 def load_langs
-  File.readlines(LANG_FILE, chomp: true).each do |line|
+  src = File.file?(LANG_FILE) ? LANG_FILE : OLD_LANG_FILE
+  File.readlines(src, chomp: true).each do |line|
     id, code = line.split("=", 2)
     next unless id&.match?(/\A\d+\z/) && %w[en ru].include?(code)
 
     LANG_CACHE[id.to_i] = code
+  end
+  if src == OLD_LANG_FILE && !LANG_CACHE.empty?
+    File.write(LANG_FILE, LANG_CACHE.map { |k, v| "#{k}=#{v}" })
   end
 rescue StandardError
   nil

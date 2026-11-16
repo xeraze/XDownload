@@ -26,3 +26,4 @@ web/*.tsbuildinfo
 .admin-token
 .bot-token
 .bot-id
+/bot/langs.txt
