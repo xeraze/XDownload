@@ -392,15 +392,12 @@ func spotifyViaYouTube(ctx context.Context, link, dir string, onProgress func(fl
 	return renameService(path, prettyExtractor(meta.extractor), "audio", meta.id, meta.height)
 }
 
-// trackMeta is what we know about the Spotify track before matching a video.
 type trackMeta struct {
 	title    string
 	artist   string
 	duration int
 }
 
-// spotifyPageMeta scrapes server-rendered meta tags from the track page.
-// A crawler UA is required: the normal page is a JS shell without them.
 func spotifyPageMeta(link string) (*trackMeta, error) {
 	canonical := link
 	if id := spotifyTrackID(link); id != "" {
@@ -442,10 +439,6 @@ func spotifyPageMeta(link string) (*trackMeta, error) {
 	return m, nil
 }
 
-// pickYouTubeVideo searches YouTube for the track and returns the first
-// candidate whose duration matches the Spotify one, so a same-named song by
-// a different artist is never picked by accident. On mismatch it errors and
-// the caller falls back to spotdl, which does proper matching itself.
 func pickYouTubeVideo(ctx context.Context, m *trackMeta) (string, error) {
 	query := fmt.Sprintf("%q %s", m.title, m.artist)
 	cmd := exec.CommandContext(ctx, "yt-dlp",

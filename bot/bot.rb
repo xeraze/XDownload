@@ -643,13 +643,12 @@ def broadcast_notice(bot, body)
   sent
 end
 
-# --- reviews: state, core API client, avatars, admin notifications --------
 
 CORE_API = ENV["XDL_API_URL"] || "http://127.0.0.1:8083"
 REVIEW_NOTIFY_SEC = Integer(ENV.fetch("XDL_REVIEW_NOTIFY_SEC", "20"))
 REVIEW_TTL_SEC = 300
 
-REVIEW_STATE = {} # user_id => { rating:, at: }
+REVIEW_STATE = {}
 REVIEW_STATE_MUTEX = Mutex.new
 
 def admin_token
@@ -663,8 +662,6 @@ def admin_token
   end
 end
 
-# Talk to the local xcore API over HTTP: it is the single writer of the
-# reviews store, so the bot never touches those files directly.
 def core_api(method, path, body = nil)
   uri = URI.parse(CORE_API + path)
   http = Net::HTTP.new(uri.host, uri.port)
@@ -701,9 +698,6 @@ def tg_display_name(user)
   name[0, 64]
 end
 
-# Largest profile photo as base64, or nil when the user has none.
-# The local Bot API server hands back an absolute file path, the hosted one
-# a relative path to fetch over HTTP — support both.
 def fetch_tg_avatar(bot, user_id)
   photos = bot.api.get_user_profile_photos(user_id: user_id, limit: 1)
   return nil unless photos.respond_to?(:photos) && photos.total_count.to_i.positive?
@@ -818,7 +812,6 @@ rescue StandardError => e
   bot.logger.warn("finish review: #{e.message}")
 end
 
-# Admin sees ip + device only here, and only when a review arrives.
 def notice_review(rev)
   rating = rev["rating"].to_i
   source = rev["source"].to_s

@@ -61,7 +61,6 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    // Moderation endpoints are reachable from localhost only (bot/CLI).
     if (url.pathname.startsWith("/api/admin/")) {
       return new Response("Not found", { status: 404 });
     }
@@ -97,7 +96,6 @@ export default {
 
     const headers = new Headers();
     headers.set("X-Api-Key", env.API_KEY || "");
-    // moderation: real client ip (never taken from the request body)
     if (ip && ip !== "unknown") headers.set("X-Real-IP", ip);
     for (const name of FWD) {
       const value = request.headers.get(name);

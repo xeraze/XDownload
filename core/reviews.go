@@ -14,10 +14,8 @@ import (
 	"time"
 )
 
-// reviewCooldownSec is the minimum delay between reviews from one source.
 const reviewCooldownSec = 60
 
-// createReviewRequest is the public (site) review payload.
 type createReviewRequest struct {
 	Rating   int    `json:"rating"`
 	Text     string `json:"text"`
@@ -25,14 +23,12 @@ type createReviewRequest struct {
 	Author   string `json:"author"`
 }
 
-// updateReviewRequest edits an existing review via its secret token.
 type updateReviewRequest struct {
 	Rating    *int   `json:"rating"`
 	Text      *string `json:"text"`
 	EditToken string `json:"edit_token"`
 }
 
-// adminReviewRequest is the trusted (bot / manual) review payload.
 type adminReviewRequest struct {
 	Rating     int    `json:"rating"`
 	Text       string `json:"text"`
@@ -58,8 +54,6 @@ type mineResponse struct {
 	CooldownS int         `json:"cooldown_s"`
 }
 
-// clientIP extracts the caller IP forwarded by the worker, falling back to
-// the socket address for direct local calls.
 func clientIP(r *http.Request) string {
 	if v := r.Header.Get("X-Real-IP"); v != "" {
 		if host, _, err := net.SplitHostPort(v); err == nil {
@@ -82,7 +76,6 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-// checkBlocked returns a matching block for the caller's IP or device id.
 func (s *apiServer) checkBlocked(r *http.Request) *Block {
 	s.store.mu.Lock()
 	defer s.store.mu.Unlock()
@@ -101,8 +94,6 @@ func writeBlocked(w http.ResponseWriter, b *Block) {
 	writeJSON(w, http.StatusForbidden, map[string]string{"error": "blocked", "reason": b.Reason})
 }
 
-// cooldownLeft returns remaining seconds before another review is allowed
-// for the given key (ip or tg id).
 func (s *apiServer) cooldownLeft(key string) int {
 	if reviewCooldownSec <= 0 {
 		return 0
@@ -136,7 +127,6 @@ func (s *apiServer) touchCooldown(key string) {
 	}
 }
 
-// GET /api/reviews — public list + aggregate.
 func (s *apiServer) handleListReviews(w http.ResponseWriter, r *http.Request) {
 	if b := s.checkBlocked(r); b != nil {
 		writeBlocked(w, b)
@@ -153,7 +143,6 @@ func (s *apiServer) handleListReviews(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, reviewListResponse{Reviews: views, Aggregate: agg, CooldownS: reviewCooldownSec})
 }
 
-// GET /api/reviews/mine?identity=... — fetch the caller's own review.
 func (s *apiServer) handleMyReview(w http.ResponseWriter, r *http.Request) {
 	if b := s.checkBlocked(r); b != nil {
 		writeBlocked(w, b)
@@ -173,7 +162,6 @@ func (s *apiServer) handleMyReview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// POST /api/reviews — create or update-by-identity (site guests).
 func (s *apiServer) handleCreateReview(w http.ResponseWriter, r *http.Request) {
 	if b := s.checkBlocked(r); b != nil {
 		writeBlocked(w, b)
@@ -236,7 +224,6 @@ func (s *apiServer) handleCreateReview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"id": rev.ID, "edit_token": rev.EditToken})
 }
 
-// PUT /api/reviews/{id} — edit own review via secret token.
 func (s *apiServer) handleUpdateReview(w http.ResponseWriter, r *http.Request) {
 	if b := s.checkBlocked(r); b != nil {
 		writeBlocked(w, b)
@@ -279,7 +266,6 @@ func (s *apiServer) handleUpdateReview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// DELETE /api/reviews/{id} — author removes own review via secret token (X-Edit-Token header).
 func (s *apiServer) handleDeleteReview(w http.ResponseWriter, r *http.Request) {
 	if b := s.checkBlocked(r); b != nil {
 		writeBlocked(w, b)
@@ -308,7 +294,6 @@ func (s *apiServer) handleDeleteReview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// GET /api/reviews/avatar/{id} — serve a stored avatar image.
 func (s *apiServer) handleReviewAvatar(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	s.store.mu.Lock()
@@ -344,7 +329,6 @@ func (s *apiServer) handleReviewAvatar(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, filepath.Base(path), fi.ModTime(), f)
 }
 
-// requireAdmin enforces the admin token on trusted endpoints.
 func (s *apiServer) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	if s.adminToken == "" || !hmac.Equal([]byte(r.Header.Get("X-Admin-Token")), []byte(s.adminToken)) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
@@ -353,7 +337,6 @@ func (s *apiServer) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// GET /api/admin/reviews?notified=false — moderation list with private fields.
 func (s *apiServer) handleAdminListReviews(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
@@ -371,12 +354,11 @@ func (s *apiServer) handleAdminListReviews(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, out)
 }
 
-// POST /api/admin/reviews — trusted insert (bot or manual).
 func (s *apiServer) handleAdminCreateReview(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 4<<20) // allow inline avatar
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<20)
 	var req adminReviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
@@ -395,7 +377,6 @@ func (s *apiServer) handleAdminCreateReview(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// bot reviews honour cooldown per telegram id; manual is exempt
 	if req.Source == string(SourceBot) && req.TGID != 0 {
 		if left := s.cooldownLeft("tg:" + itoa64(req.TGID)); left > 0 {
 			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "cooldown", "retry": itoa(left)})
@@ -445,7 +426,6 @@ func (s *apiServer) handleAdminCreateReview(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"id": rev.ID, "edit_token": rev.EditToken})
 }
 
-// saveAvatar decodes a base64 image and stores it under the avatars dir.
 func (s *apiServer) saveAvatar(b64, ext string) (string, error) {
 	ext = strings.ToLower(strings.TrimPrefix(ext, "."))
 	if ext == "" {
@@ -456,7 +436,6 @@ func (s *apiServer) saveAvatar(b64, ext string) (string, error) {
 	}
 	data, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(b64, "data:image/"))
 	if err != nil {
-		// try raw (strip any data: prefix payload)
 		if i := strings.Index(b64, ","); i >= 0 {
 			data, err = base64.StdEncoding.DecodeString(b64[i+1:])
 		}
@@ -475,7 +454,6 @@ func (s *apiServer) saveAvatar(b64, ext string) (string, error) {
 	return path, nil
 }
 
-// DELETE /api/admin/reviews/{id} — remove a review.
 func (s *apiServer) handleAdminDeleteReview(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
@@ -491,7 +469,6 @@ func (s *apiServer) handleAdminDeleteReview(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// PUT /api/admin/reviews/{id}/notified — mark admin pinged.
 func (s *apiServer) handleAdminMarkNotified(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
@@ -506,7 +483,6 @@ func (s *apiServer) handleAdminMarkNotified(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// GET /api/admin/blocks — list blocks.
 func (s *apiServer) handleAdminListBlocks(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
@@ -524,7 +500,6 @@ type blockRequest struct {
 	Reason string `json:"reason"`
 }
 
-// POST /api/admin/blocks — ban an ip or device.
 func (s *apiServer) handleAdminAddBlock(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
@@ -558,7 +533,6 @@ func (s *apiServer) handleAdminAddBlock(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, b)
 }
 
-// DELETE /api/admin/blocks/{id} — unban.
 func (s *apiServer) handleAdminRemoveBlock(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return

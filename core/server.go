@@ -53,7 +53,6 @@ type apiServer struct {
 	timeout time.Duration
 	maxJobs int
 
-	// reviews / moderation
 	store          *store
 	adminToken     string
 	reviewMu       sync.Mutex
@@ -146,7 +145,6 @@ func cmdAPI(args []string) int {
 	mux.HandleFunc("GET /api/job/{id}", s.handleJob)
 	mux.HandleFunc("GET /api/file/{id}", s.handleFile)
 
-	// public reviews
 	mux.HandleFunc("GET /api/reviews", s.handleListReviews)
 	mux.HandleFunc("GET /api/reviews/mine", s.handleMyReview)
 	mux.HandleFunc("POST /api/reviews", s.handleCreateReview)
@@ -154,7 +152,6 @@ func cmdAPI(args []string) int {
 	mux.HandleFunc("DELETE /api/reviews/{id}", s.handleDeleteReview)
 	mux.HandleFunc("GET /api/reviews/avatar/{id}", s.handleReviewAvatar)
 
-	// admin reviews + blocks
 	mux.HandleFunc("GET /api/admin/reviews", s.handleAdminListReviews)
 	mux.HandleFunc("POST /api/admin/reviews", s.handleAdminCreateReview)
 	mux.HandleFunc("DELETE /api/admin/reviews/{id}", s.handleAdminDeleteReview)
@@ -207,7 +204,6 @@ func (s *apiServer) prepareDir() {
 
 func (s *apiServer) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// admin routes authenticate via X-Admin-Token inside requireAdmin.
 		if !strings.HasPrefix(r.URL.Path, "/api/admin/") {
 			if s.key != "" && !hmac.Equal([]byte(r.Header.Get("X-Api-Key")), []byte(s.key)) {
 				writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})

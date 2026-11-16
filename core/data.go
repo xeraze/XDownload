@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// ReviewSource identifies where a review came from.
 type ReviewSource string
 
 const (
@@ -22,46 +21,39 @@ const (
 	SourceManual ReviewSource = "manual"
 )
 
-// Review is a user-submitted rating + comment.
-//
-// Fields marked "private" are used only for moderation: they are never sent
-// to the public list endpoint and are visible only through the admin API.
 type Review struct {
 	ID         string       `json:"id"`
-	Rating     int          `json:"rating"` // 1..5
+	Rating     int          `json:"rating"`
 	Text       string       `json:"text"`
 	Author     string       `json:"author"`
 	Source     ReviewSource `json:"source"`
-	Identity   string       `json:"identity"`           // private: "dev:<uuid>" or "tg:<id>"
-	TGID       int64        `json:"tg_id,omitempty"`    // private: telegram user id (bot reviews)
+	Identity   string       `json:"identity"`
+	TGID       int64        `json:"tg_id,omitempty"`
 	TGUsername string       `json:"tg_username,omitempty"`
-	IP         string       `json:"ip,omitempty"`       // private: moderation
-	UserAgent  string       `json:"user_agent,omitempty"` // private: moderation
-	AvatarPath string       `json:"avatar_path,omitempty"` // private: on-disk avatar file
+	IP         string       `json:"ip,omitempty"`
+	UserAgent  string       `json:"user_agent,omitempty"`
+	AvatarPath string       `json:"avatar_path,omitempty"`
 	HasAvatar  bool         `json:"has_avatar"`
-	EditToken  string       `json:"edit_token,omitempty"` // private: secret for author edits
-	Notified   bool         `json:"notified"`            // private: admin was pinged
+	EditToken  string       `json:"edit_token,omitempty"`
+	Notified   bool         `json:"notified"`
 	CreatedAt  time.Time    `json:"created_at"`
 	UpdatedAt  time.Time    `json:"updated_at"`
 }
 
-// Block restricts access by IP or device.
 type Block struct {
 	ID        string    `json:"id"`
-	Kind      string    `json:"kind"` // "ip" | "device"
+	Kind      string    `json:"kind"`
 	Value     string    `json:"value"`
 	Reason    string    `json:"reason"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Aggregate is the public rating summary used for the site diagram.
 type Aggregate struct {
 	Avg   float64        `json:"avg"`
 	Count int            `json:"count"`
-	Dist  map[string]int `json:"dist"` // "1".."5" -> count
+	Dist  map[string]int `json:"dist"`
 }
 
-// publicView strips private moderation fields before JSON encoding.
 type publicView struct {
 	ID        string       `json:"id"`
 	Rating    int          `json:"rating"`
@@ -103,15 +95,12 @@ func dataDir() string {
 	return filepath.Join(base, "xdownload")
 }
 
-// store persists reviews, blocks and activity to JSON files. It is the single
-// writer; the CLI commands talk to the running API over HTTP rather than
-// touching these files directly.
 type store struct {
 	mu       sync.Mutex
 	dir      string
 	reviews  []*Review
 	blocks   []*Block
-	activity map[string]time.Time // identity -> last seen
+	activity map[string]time.Time
 }
 
 func newStore(dir string) *store {
@@ -137,7 +126,6 @@ func (s *store) load() {
 	}
 }
 
-// readJSON reads a JSON file into T, returning nil on any error.
 func readJSON[T any](path string) T {
 	var out T
 	b, err := os.ReadFile(path)
@@ -150,8 +138,6 @@ func readJSON[T any](path string) T {
 	return out
 }
 
-// writeJSONAtomic writes v to path via a temp file + rename so a crash never
-// leaves a half-written file behind.
 func writeJSONAtomic(path string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -194,7 +180,6 @@ func (s *store) findByIdentity(identity string) *Review {
 	return nil
 }
 
-// aggregate computes the public rating summary over non-deleted reviews.
 func (s *store) aggregate() Aggregate {
 	dist := map[string]int{"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
 	sum, n := 0, 0
@@ -213,7 +198,6 @@ func (s *store) aggregate() Aggregate {
 	return Aggregate{Avg: avg, Count: n, Dist: dist}
 }
 
-// sortedReviews returns reviews newest-first.
 func (s *store) sortedReviews() []*Review {
 	out := make([]*Review, len(s.reviews))
 	copy(out, s.reviews)
@@ -248,7 +232,7 @@ func (s *store) upsertReview(r *Review) error {
 			existing.AvatarPath = r.AvatarPath
 			existing.HasAvatar = true
 		}
-		existing.Notified = false // re-notify on edit
+		existing.Notified = false
 		return s.saveReviews()
 	}
 	r.CreatedAt = time.Now().UTC()
@@ -304,7 +288,6 @@ func (s *store) removeBlock(id string) error {
 	return errors.New("not found")
 }
 
-// touchActivity records the last time an identity was seen (throttled).
 func (s *store) touchActivity(identity string) {
 	if identity == "" {
 		return

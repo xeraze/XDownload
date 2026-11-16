@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-// The CLI never touches the JSON store directly: the API process is the single
-// writer, so every admin command goes over HTTP with the admin token.
 
 const adminTokenFile = ".admin-token"
 
