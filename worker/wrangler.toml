@@ -3,5 +3,5 @@ main = "src/index.js"
 compatibility_date = "2026-10-01"
 
 [vars]
-ORIGIN = "https://veh9un-ip-45-132-93-47.tunnelmole.net"
+ORIGIN = "https://fyubch-ip-45-132-93-47.tunnelmole.net"
 SITE_ORIGIN = "https://xeraze.github.io/XDownload"

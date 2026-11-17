@@ -389,13 +389,68 @@ func spotifyViaYouTube(ctx context.Context, link, dir string, onProgress func(fl
 	if err != nil {
 		return "", err
 	}
-	return renameService(path, prettyExtractor(meta.extractor), "audio", meta.id, meta.height)
+	renamed, err := renameService(path, prettyExtractor(meta.extractor), "audio", meta.id, meta.height)
+	if err != nil {
+		return "", err
+	}
+	embedCover(ctx, renamed, m.cover)
+	return renamed, nil
+}
+
+// embedCover best-effort puts the album art into the mp3 as an ID3 APIC
+// frame. Any failure leaves the file untouched - a missing cover is cosmetic,
+// never worth failing the download over.
+func embedCover(ctx context.Context, mp3Path, coverURL string) {
+	if coverURL == "" || !strings.HasSuffix(strings.ToLower(mp3Path), ".mp3") {
+		return
+	}
+	req, err := http.NewRequest(http.MethodGet, coverURL, nil)
+	if err != nil {
+		return
+	}
+	client := &http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return
+	}
+	img, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil || len(img) == 0 {
+		return
+	}
+	imgPath := mp3Path + ".cover"
+	if err := os.WriteFile(imgPath, img, 0o644); err != nil {
+		return
+	}
+	defer os.Remove(imgPath)
+	out := mp3Path + ".tagged.mp3"
+	cmd := exec.CommandContext(ctx, "ffmpeg", "-y",
+		"-i", mp3Path, "-i", imgPath,
+		"-map", "0:a", "-map", "1:v", "-c", "copy",
+		"-id3v2_version", "3",
+		"-metadata:s:v", "title=Album cover",
+		"-metadata:s:v", "comment=Cover (front)",
+		"-disposition:v", "attached_pic",
+		out)
+	if err := cmd.Run(); err != nil {
+		os.Remove(out)
+		return
+	}
+	if err := os.Rename(out, mp3Path); err != nil {
+		os.Remove(out)
+		return
+	}
+	fmt.Println("cover embedded:", filepath.Base(mp3Path))
 }
 
 type trackMeta struct {
 	title    string
 	artist   string
 	duration int
+	cover    string
 }
 
 func spotifyPageMeta(link string) (*trackMeta, error) {
@@ -429,7 +484,7 @@ func spotifyPageMeta(link string) (*trackMeta, error) {
 		}
 		return ""
 	}
-	m := &trackMeta{title: metaTag("og:title"), artist: metaTag("music:musician_description")}
+	m := &trackMeta{title: metaTag("og:title"), artist: metaTag("music:musician_description"), cover: metaTag("og:image")}
 	if d := metaTag("music:duration"); d != "" {
 		m.duration, _ = strconv.Atoi(d)
 	}
